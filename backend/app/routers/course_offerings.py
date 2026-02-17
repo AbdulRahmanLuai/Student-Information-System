@@ -23,13 +23,12 @@ from .. import oauth2
 
 def get_user_from_teacher(teacher_id: int, db: Session) -> Optional[User]:
     """Get the User associated with a Teacher ID."""
-    teacher = db.exec(select(Teacher).where(Teacher.id == teacher_id)).first()
+    teacher = db.get(Teacher, teacher_id) 
     
     if not teacher:
         return None
     
     return teacher.user
-
 
 def get_teacher_from_user(user_id: int, db: Session) -> Optional[Teacher]:
     return (
@@ -77,7 +76,7 @@ def get_course_offerings(
     
     
     # Build the query
-    query = (
+    stmt = (
         select(
             Section.name.label("section"),
             Course.name.label("course_name"),
@@ -112,10 +111,10 @@ def get_course_offerings(
     )
     
     if teacher_id:
-        query = query.where(Teacher.id == teacher_id)
+        stmt = stmt.where(Teacher.id == teacher_id)
         
 
-    result = db.exec(query).all()
+    result = db.exec(stmt).all()
     return result
 
 
@@ -126,8 +125,7 @@ def get_course_offerings(
 def get_course_offering_enrollments(course_offering_id: int, current_user=Depends(oauth2.get_current_user), db: Session=Depends(get_db)):
     
     
-    course_offering = db.exec(
-    select(models.CourseOffering).where(models.CourseOffering.id == course_offering_id)).scalars().first()
+    course_offering = db.get(CourseOffering, course_offering_id)
     
     if not course_offering:
         raise HTTPException(status_code=404, detail=f"No course offering with id: {course_offering_id} exists")
@@ -148,7 +146,50 @@ def get_course_offering_enrollments(course_offering_id: int, current_user=Depend
     ).scalars().all() 
     
     return enrollments
+
+
+
+
+@router.put('/enrollments/{enrollment_id}', response_model=schemas.EnrollmentOut) 
+def enter_mark(mark_input: schemas.MarkInput, enrollment_id: int,
+               db: Session = Depends(get_db),
+               current_user = Depends(oauth2.get_current_user)):
+    
+    
+    
+    # The current user should be the teacher for the course offering
+    # The enrollment status should be active, never change completed enrollemnts
+    
+    enrollment = db.exec(
+    select(Enrollment)
+    .where(Enrollment.id == enrollment_id)
+    .options(
+        joinedload(Enrollment.course_offering).joinedload(CourseOffering.teacher)
+    )
+    ).scalars().first()
+    
+    print(enrollment)
+    
+    if not enrollment:
+        raise HTTPException(404, detail="Enrollment does not exist")
+    
+    print(enrollment)
+    course_offering = enrollment.course_offering
+    teacher = course_offering.teacher
+    teacher_user = get_user_from_teacher(teacher.id, db=db)
+    
+    if current_user.id != teacher_user.id:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="you are not authorized to change this field")
+    
+    if enrollment.status != "active":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You are only allowed to update marks of active enrollments")
     
 
+    enrollment.final_mark = mark_input.mark
+    db.commit()
+    db.refresh(enrollment)
+    return enrollment
+    
+    
     
     

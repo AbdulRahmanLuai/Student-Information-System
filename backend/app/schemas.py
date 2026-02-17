@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Literal
 
 class CourseOfferingOut(BaseModel):
@@ -42,3 +42,7 @@ class EnrollmentOut(BaseModel):
     
     class Config:
         from_attributes = True
+        
+        
+class MarkInput(BaseModel):
+    mark: int = Field(ge=0, le=100) 
