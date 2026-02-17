@@ -1,10 +1,7 @@
 from typing import Optional
 from datetime import datetime, date
 from sqlmodel import SQLModel, Field, Relationship
-
-
 from enum import Enum
-
 from sqlmodel import SQLModel, Field, Relationship
 from typing import Optional, List
 from enum import Enum

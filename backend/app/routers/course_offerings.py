@@ -4,7 +4,7 @@ from ..database import get_db
 from sqlmodel import Session
 from sqlalchemy import select, func, update
 from sqlalchemy.orm import joinedload
-from ..models import (Section, Semester, Student, Course, CourseOffering, Enrollment, Teacher, User)
+from ..models import (Section, Semester, Student, Course, CourseOffering, Enrollment, Teacher, User, Role)
 from typing import List, Optional
 from .. import oauth2
 
@@ -63,13 +63,13 @@ def get_course_offerings(
     
     # if role = teacher: check that teacher_id is None or equal to teacher.id
     
-    if role == "teacher":
+    if role == Role.teacher:
         teacher = get_teacher_from_user(user_id, db=db)
         if teacher_id is not None and teacher_id != teacher.id:
             raise HTTPException(status_code = status.HTTP_401_UNAUTHORIZED, 
             detail=f"you are not authorized to view course offerings of teacher with id: {teacher_id}")
         teacher_id = teacher.id     
-    if role=="admin" and teacher_id is not None:
+    if role== Role.admin and teacher_id is not None:
         teacher = db.exec(select(Teacher).where(Teacher.id == teacher_id)).first()
         if not teacher:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"teacher with teacher_id:{teacher_id} does not exist")
@@ -131,7 +131,7 @@ def get_course_offering_enrollments(course_offering_id: int, current_user=Depend
         raise HTTPException(status_code=404, detail=f"No course offering with id: {course_offering_id} exists")
     
     # check that the teacher owns the course_offering
-    if current_user.role == "teacher":
+    if current_user.role == Role.teacher:
         teacher = get_teacher_from_user(current_user.id, db)
         if course_offering.teacher_id != teacher.id:
             raise HTTPException(
@@ -223,6 +223,10 @@ def commit_marks(course_offering_id: int, db: Session = Depends(get_db),
         
     db.commit()
     return active_enrollments
+
+
+
+# TODO: Excel in, Excel out
     
     
     

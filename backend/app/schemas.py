@@ -1,5 +1,7 @@
 from pydantic import BaseModel, Field
-from typing import Literal
+from typing import Literal, Optional, Union
+from .models import Role
+from datetime import date
 
 class CourseOfferingOut(BaseModel):
     section: str
@@ -21,9 +23,6 @@ class TokenOut(BaseModel):
 class TokenPayload(BaseModel):
     id: int
     
-    
-from pydantic import BaseModel
-from typing import Optional
 
 class StudentBasic(BaseModel):
     id: int
@@ -47,3 +46,29 @@ class EnrollmentOut(BaseModel):
         
 class MarkInput(BaseModel):
     mark: int = Field(ge=0, le=100) 
+    
+    
+class UserCreateBase(BaseModel):
+    first_name: str
+    last_name: str
+    email: str
+    role: Role
+
+class TeacherCreate(UserCreateBase):
+    role: Literal[Role.teacher]
+    hire_date: Optional[date] = None
+    department_id: int
+
+class AdminCreate(UserCreateBase):
+    role: Literal[Role.admin]
+
+class UserCreate(BaseModel):
+    user: Union[TeacherCreate, AdminCreate] = Field(discriminator='role')
+    
+class UserCreatedOut(BaseModel):
+    id: int
+    first_name: str
+    last_name: str
+    email: str
+    role: Role
+    plain_password: str  # only returned at creation time
