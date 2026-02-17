@@ -10,7 +10,7 @@ from app.config import settings
 from app import utils
 
 # --- Setup Engine ---
-engine = create_engine(settings.DATABASE_URL, echo=True)
+engine = create_engine(settings.DATABASE_URL)
 
 def get_db() -> Generator[Session, None, None]:
     with Session(engine) as session:

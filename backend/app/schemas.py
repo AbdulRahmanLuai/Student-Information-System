@@ -39,6 +39,7 @@ class EnrollmentOut(BaseModel):
     student: StudentBasic
     final_mark: Optional[str] = None
     status: str
+    id: int
     
     class Config:
         from_attributes = True

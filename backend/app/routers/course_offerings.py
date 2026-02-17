@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from .. import models, schemas
 from ..database import get_db
 from sqlmodel import Session
-from sqlalchemy import select, func
+from sqlalchemy import select, func, update
 from sqlalchemy.orm import joinedload
 from ..models import (Section, Semester, Student, Course, CourseOffering, Enrollment, Teacher, User)
 from typing import List, Optional
@@ -189,6 +189,44 @@ def enter_mark(mark_input: schemas.MarkInput, enrollment_id: int,
     db.commit()
     db.refresh(enrollment)
     return enrollment
+    
+    
+
+@router.post('/{course_offering_id}/enrollments/commit', response_model = List[schemas.EnrollmentOut])
+def commit_marks(course_offering_id: int, db: Session = Depends(get_db),
+               current_user = Depends(oauth2.get_current_user)):
+    
+    
+    # check teacher authorization
+    course_offering = db.get(CourseOffering, course_offering_id)
+    if not course_offering:
+        raise HTTPException(404, detail=f"course offering {course_offering_id} does not exist")
+    
+    teacher = db.get(Teacher, course_offering.teacher_id)
+    teacher_user = get_user_from_teacher(teacher.id, db=db)
+    if teacher_user.id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="only the teacher of the course offering can commit marks")
+    
+    # check for active students
+    stmt = select(Enrollment).where(Enrollment.course_offering_id == course_offering_id,
+                                    Enrollment.status == 'active')
+    active_enrollments = db.exec(stmt).scalars().all()
+    if not active_enrollments:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"No active enrollments for course offering with id {course_offering_id}")
+    # check that there are no null values for active students
+    nulls = sum([e.final_mark is None for e in active_enrollments])
+    if nulls:
+        raise HTTPException(400, detail="all marks must be entered before commit")
+    # change all active --> completed
+    for e in active_enrollments:
+        e.status = 'completed'
+        
+    db.commit()
+    return active_enrollments
+    
+    
+    
+    
     
     
     
