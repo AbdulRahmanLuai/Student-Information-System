@@ -43,187 +43,218 @@ def get_teacher_from_user(user_id: int, db: Session) -> Optional[Teacher]:
 router = APIRouter(prefix='/course-offerings', tags=["course-offerings"])
 
 
-@router.get('', response_model=List[schemas.CourseOfferingOut])
-def get_course_offerings(
-    teacher_id: Optional[int] = None,
-    current_user = Depends(oauth2.get_current_user),
+from fastapi import APIRouter, Depends, HTTPException, status, Query
+from typing import List, Optional
+from sqlmodel import Session, select
+from sqlalchemy.orm import joinedload
+
+from .. import schemas
+from ..database import get_db
+from ..models import CourseOffering, Teacher, Semester
+from .. import oauth2
+
+router = APIRouter(prefix="/course-offerings", tags=["course-offerings"])
+
+
+def get_teacher_from_user(user_id: int, db: Session) -> Teacher:
+    return db.execute(
+        select(Teacher).where(Teacher.user_id == user_id)
+    ).scalars().first()
+
+
+@router.get("", response_model=List[schemas.CourseOfferingOut])
+def get_my_course_offerings(
+    semester_id: Optional[int] = Query(None),
+    current_user=Depends(oauth2.get_current_user),
     db: Session = Depends(get_db)
 ):
-    """
-    Returns course offerings for the current user.
-    Teachers can only view their own courses.
-    Admins can supply a teacher_id to view a specific teacher's courses.
-    """
-    
-    # Extract user info
-    user_id = current_user.id
-    role = current_user.role
-    
-    # teacher_id passed as parameter: ?teacher_id
-    
-    # if role = teacher: check that teacher_id is None or equal to teacher.id
-    
-    if role == Role.teacher:
-        teacher = get_teacher_from_user(user_id, db=db)
-        if teacher_id is not None and teacher_id != teacher.id:
-            raise HTTPException(status_code = status.HTTP_401_UNAUTHORIZED, 
-            detail=f"you are not authorized to view course offerings of teacher with id: {teacher_id}")
-        teacher_id = teacher.id     
-    if role== Role.admin and teacher_id is not None:
-        teacher = db.exec(select(Teacher).where(Teacher.id == teacher_id)).first()
-        if not teacher:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"teacher with teacher_id:{teacher_id} does not exist")
-    
-    
-    # Build the query
-    stmt = (
-        select(
-            Section.name.label("section"),
-            Course.name.label("course_name"),
-            Course.code.label("course_code"),
-            Semester.academic_year_start.label("academic_year_start"),
-            Semester.academic_year_end.label("academic_year_end"),
-            Semester.number.label("semester_number"),
-            User.first_name.label("first_name"),
-            User.last_name.label("last_name"),
-            CourseOffering.id.label("course_offering_id"),
-            func.count(Enrollment.id).label("number_of_students")
+    teacher = get_teacher_from_user(current_user.id, db)
+    if not teacher:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="User is not a teacher"
         )
-        .select_from(CourseOffering)
-        .join(Section, CourseOffering.section_id == Section.id)
-        .join(Course, CourseOffering.course_id == Course.id)
-        .join(Semester, CourseOffering.semester_id == Semester.id)
-        .join(Teacher, CourseOffering.teacher_id == Teacher.id)  # Fixed: join on Teacher.id
-        .join(User, Teacher.user_id == User.id)  # Fixed: join Teacher to User via user_id
-        .outerjoin(Enrollment, CourseOffering.id == Enrollment.course_offering_id)
-        .group_by(
-            CourseOffering.id,
-            Section.name,
-            Course.name,
-            Course.code,
-            Teacher.id,
-            User.first_name,
-            User.last_name,
-            Semester.academic_year_start,
-            Semester.academic_year_end,
-            Semester.number
+
+    # 🔹 Resolve semester
+    if semester_id:
+        semester = db.get(Semester, semester_id)
+        if not semester:
+            raise HTTPException(404, "Semester not found")
+    else:
+        semester = db.execute(
+            select(Semester).where(Semester.is_current == True)
+        ).scalars().first()
+
+        if not semester:
+            raise HTTPException(400, "No current semester set")
+
+    # 🔹 Query
+    stmt = (
+        select(CourseOffering)
+        .where(
+            CourseOffering.teacher_id == teacher.id,
+            CourseOffering.semester_id == semester.id
+        )
+        .options(
+            joinedload(CourseOffering.course),
+            joinedload(CourseOffering.section),
+            joinedload(CourseOffering.semester),
+            joinedload(CourseOffering.teacher).joinedload(Teacher.user)
         )
     )
-    
-    if teacher_id:
-        stmt = stmt.where(Teacher.id == teacher_id)
-        
 
-    result = db.exec(stmt).all()
-    return result
+    return db.execute(stmt).scalars().all()
 
 
 
 
 
-@router.get('/{course_offering_id}/enrollments', response_model=List[schemas.EnrollmentOut]) #response model
-def get_course_offering_enrollments(course_offering_id: int, current_user=Depends(oauth2.get_current_user), db: Session=Depends(get_db)):
-    
-    
-    course_offering = db.get(CourseOffering, course_offering_id)
-    
-    if not course_offering:
-        raise HTTPException(status_code=404, detail=f"No course offering with id: {course_offering_id} exists")
-    
-    # check that the teacher owns the course_offering
-    if current_user.role == Role.teacher:
-        teacher = get_teacher_from_user(current_user.id, db)
-        if course_offering.teacher_id != teacher.id:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="You are not authorized to view enrollments for this course offering"
-            )
-    
-    enrollments = db.exec(
+@router.get("/{course_offering_id}/enrollments", response_model=List[schemas.EnrollmentOut])
+def get_course_offering_enrollments(
+    course_offering_id: int,
+    current_user=Depends(oauth2.get_current_user),
+    db: Session = Depends(get_db)
+):
+    teacher = get_teacher_from_user(current_user.id, db)
+    if not teacher:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="User is not a teacher"
+        )
+
+    stmt = (
         select(Enrollment)
-        .where(Enrollment.course_offering_id == course_offering_id)
+        .join(CourseOffering, Enrollment.course_offering_id == CourseOffering.id)
+        .where(
+            Enrollment.course_offering_id == course_offering_id,
+            CourseOffering.teacher_id == teacher.id
+        )
         .options(joinedload(Enrollment.student))
-    ).scalars().all() 
-    
+    )
+
+    enrollments = db.execute(stmt).scalars().all()
+
+    if not enrollments:
+        # distinguish between "not found" and "no enrollments"
+        exists = db.get(CourseOffering, course_offering_id)
+        if not exists:
+            raise HTTPException(404, "Course offering not found")
+        # exists but not owned
+        if exists.teacher_id != teacher.id:
+            raise HTTPException(403, "Not authorized")
+
     return enrollments
 
 
 
+@router.put("/{enrollment_id}", response_model=schemas.EnrollmentOut)
+def enter_mark(
+    mark_input: schemas.MarkInput,
+    enrollment_id: int,
+    db: Session = Depends(get_db),
+    current_user=Depends(oauth2.get_current_user)
+):
+    teacher = get_teacher_from_user(current_user.id, db)
+    if not teacher:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="User is not a teacher"
+        )
 
-@router.put('/enrollments/{enrollment_id}', response_model=schemas.EnrollmentOut) 
-def enter_mark(mark_input: schemas.MarkInput, enrollment_id: int,
-               db: Session = Depends(get_db),
-               current_user = Depends(oauth2.get_current_user)):
-    
-    
-    
-    # The current user should be the teacher for the course offering
-    # The enrollment status should be active, never change completed enrollemnts
-    
-    enrollment = db.exec(
-    select(Enrollment)
-    .where(Enrollment.id == enrollment_id)
-    .options(
-        joinedload(Enrollment.course_offering).joinedload(CourseOffering.teacher)
+    # Atomic update: only active enrollments for the teacher
+    stmt = (
+        update(Enrollment)
+        .where(
+            Enrollment.id == enrollment_id,
+            Enrollment.status == "active",
+            Enrollment.course_offering.has(CourseOffering.teacher_id == teacher.id)
+        )
+        .values(final_mark=mark_input.mark)
+        .returning(Enrollment)
     )
-    ).scalars().first()
-    
-    print(enrollment)
-    
-    if not enrollment:
-        raise HTTPException(404, detail="Enrollment does not exist")
-    
-    print(enrollment)
-    course_offering = enrollment.course_offering
-    teacher = course_offering.teacher
-    teacher_user = get_user_from_teacher(teacher.id, db=db)
-    
-    if current_user.id != teacher_user.id:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="you are not authorized to change this field")
-    
-    if enrollment.status != "active":
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You are only allowed to update marks of active enrollments")
-    
 
-    enrollment.final_mark = mark_input.mark
+    enrollment = db.execute(stmt).scalars().first()
+
+    if not enrollment:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Enrollment not found, not active, or not editable by you"
+        )
+
     db.commit()
     db.refresh(enrollment)
-    return enrollment
-    
+    return enrollment    
     
 
-@router.post('/{course_offering_id}/enrollments/commit', response_model = List[schemas.EnrollmentOut])
-def commit_marks(course_offering_id: int, db: Session = Depends(get_db),
-               current_user = Depends(oauth2.get_current_user)):
-    
-    
-    # check teacher authorization
+
+@router.post("/{course_offering_id}/enrollments/commit", response_model=list[schemas.EnrollmentOut])
+def commit_marks(
+    course_offering_id: int,
+    db: Session = Depends(get_db),
+    current_user=Depends(oauth2.get_current_user)
+):
+    teacher = get_teacher_from_user(current_user.id, db)
+    if not teacher:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="User is not a teacher"
+        )
+
+    # 1️⃣ Validate course offering ownership
     course_offering = db.get(CourseOffering, course_offering_id)
     if not course_offering:
-        raise HTTPException(404, detail=f"course offering {course_offering_id} does not exist")
-    
-    teacher = db.get(Teacher, course_offering.teacher_id)
-    teacher_user = get_user_from_teacher(teacher.id, db=db)
-    if teacher_user.id != current_user.id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="only the teacher of the course offering can commit marks")
-    
-    # check for active students
-    stmt = select(Enrollment).where(Enrollment.course_offering_id == course_offering_id,
-                                    Enrollment.status == 'active')
-    active_enrollments = db.exec(stmt).scalars().all()
-    if not active_enrollments:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"No active enrollments for course offering with id {course_offering_id}")
-    # check that there are no null values for active students
-    nulls = sum([e.final_mark is None for e in active_enrollments])
-    if nulls:
-        raise HTTPException(400, detail="all marks must be entered before commit")
-    # change all active --> completed
-    for e in active_enrollments:
-        e.status = 'completed'
-        
-    db.commit()
-    return active_enrollments
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Course offering {course_offering_id} does not exist"
+        )
 
+    if course_offering.teacher_id != teacher.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You are not authorized to commit marks for this course offering"
+        )
+
+    # 2️⃣ Fetch active enrollments
+    stmt_active = select(Enrollment).where(
+        Enrollment.course_offering_id == course_offering_id,
+        Enrollment.status == "active"
+    )
+    active_enrollments = db.execute(stmt_active).scalars().all()
+
+    if not active_enrollments:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"No active enrollments for course offering {course_offering_id}"
+        )
+
+    # 3️⃣ Ensure all active enrollments have marks
+    if any(e.final_mark is None for e in active_enrollments):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="All marks must be entered before committing"
+        )
+
+    # 4️⃣ Atomic update to completed
+    stmt_update = (
+        update(Enrollment)
+        .where(
+            Enrollment.course_offering_id == course_offering_id,
+            Enrollment.status == "active"
+        )
+        .values(status="completed")
+    )
+    db.execute(stmt_update)
+    db.commit()
+
+    # 5️⃣ Refetch ORM objects for response
+    updated_enrollments = db.execute(
+        select(Enrollment).where(
+            Enrollment.course_offering_id == course_offering_id,
+            Enrollment.status == "completed"
+        )
+    ).scalars().all()
+
+    return updated_enrollments
 
 
 # TODO: Excel in, Excel out
