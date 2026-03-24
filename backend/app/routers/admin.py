@@ -32,7 +32,7 @@ def require_admin(current_user = Depends(oauth2.get_current_user)):
         raise HTTPException(status_code=403, detail="only admins can access this operation")
     return current_user
 
-router = APIRouter(prefix='/admin')
+router = APIRouter(prefix='/admin', tags=["admin"])
 
 # ── Users ────────────────────────────────────────────────────────────────────
 
@@ -93,15 +93,15 @@ def get_users(current_user=Depends(require_admin), db: Session = Depends(get_db)
 
     
 
-@router.delete('/users/{user_id}', status_code=status.HTTP_204_NO_CONTENT)
-def delete_user(user_id: int, db: Session = Depends(get_db), current_user=Depends(require_admin)):
+# @router.delete('/users/{user_id}', status_code=status.HTTP_204_NO_CONTENT)
+# def delete_user(user_id: int, db: Session = Depends(get_db), current_user=Depends(require_admin)):
     
-    user = db.get(User, user_id)
-    if not user:
-        raise HTTPException(status_code=404, detail=f"user with id {user_id} not found")
+#     user = db.get(User, user_id)
+#     if not user:
+#         raise HTTPException(status_code=404, detail=f"user with id {user_id} not found")
     
-    db.delete(user)
-    db.commit()
+#     db.delete(user)
+#     db.commit()
 
 # ── Teachers ─────────────────────────────────────────────────────────────────
 
@@ -659,25 +659,25 @@ def enroll_student(data: schemas.EnrollmentCreate, db: Session = Depends(get_db)
     return new_enrollment
 
 
-# @router.delete('/enrollments/{enrollment_id}', status_code=status.HTTP_204_NO_CONTENT)
-# def delete_enrollment(enrollment_id: int, db: Session = Depends(get_db),
-#                       current_user=Depends(require_admin)):
+@router.delete('/enrollments/{enrollment_id}', status_code=status.HTTP_204_NO_CONTENT)
+def delete_enrollment(enrollment_id: int, db: Session = Depends(get_db),
+                      current_user=Depends(require_admin)):
 
-#     enrollment = db.get(Enrollment, enrollment_id)
-#     if not enrollment:
-#         raise HTTPException(status_code=404, detail=f"enrollment with id {enrollment_id} not found")
+    enrollment = db.get(Enrollment, enrollment_id)
+    if not enrollment:
+        raise HTTPException(status_code=404, detail=f"enrollment with id {enrollment_id} not found")
 
-#     if enrollment.status != 'active':
-#         raise HTTPException(status_code=400, detail="only active enrollments can be deleted")
+    if enrollment.status != 'active':
+        raise HTTPException(status_code=400, detail="only active enrollments can be deleted")
 
-#     # check that the enrollment belongs to the current semester
-#     course_offering = db.get(CourseOffering, enrollment.course_offering_id)
-#     semester = db.get(Semester, course_offering.semester_id)
-#     if not semester.is_current:
-#         raise HTTPException(status_code=400, detail="only enrollments from the current semester can be deleted")
+    # check that the enrollment belongs to the current semester
+    course_offering = db.get(CourseOffering, enrollment.course_offering_id)
+    semester = db.get(Semester, course_offering.semester_id)
+    if not semester.is_current:
+        raise HTTPException(status_code=400, detail="only enrollments from the current semester can be deleted")
 
-#     db.delete(enrollment)
-#     db.commit()
+    db.delete(enrollment)
+    db.commit()
     
 @router.get('/enrollments', response_model=List[schemas.EnrollmentOut])
 def get_enrollments(section_id: Optional[int] = None, semester_id: Optional[int] = None,

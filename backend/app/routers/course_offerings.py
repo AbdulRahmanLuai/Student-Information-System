@@ -40,7 +40,7 @@ def get_teacher_from_user(user_id: int, db: Session) -> Optional[Teacher]:
     )
 
 
-router = APIRouter(prefix='/course-offerings')
+router = APIRouter(prefix='/course-offerings', tags=["course-offerings"])
 
 
 @router.get('', response_model=List[schemas.CourseOfferingOut])
