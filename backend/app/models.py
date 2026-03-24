@@ -81,6 +81,7 @@ class Semester(SQLModel, table=True):
     academic_year_start: int
     academic_year_end: int
     number: int
+    is_current: Optional[bool] = False
 
     # Relationships
     course_offerings: list["CourseOffering"] = Relationship(back_populates="semester")
@@ -130,6 +131,5 @@ class Enrollment(SQLModel, table=True):
     # Relationships
     student: Optional[Student] = Relationship(back_populates="enrollments")
     course_offering: Optional[CourseOffering] = Relationship(back_populates="enrollments")
-    
     
     
