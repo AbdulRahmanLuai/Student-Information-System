@@ -508,7 +508,7 @@ def create_course_offering(data: schemas.CourseOfferingCreate, db: Session = Dep
 
 
 @router.get('/course-offerings', response_model=List[schemas.CourseOfferingOut])
-def get_course_offerings(semester_id: Optional[int] = None, db: Session = Depends(get_db),
+def get_course_offerings(semester_id: Optional[int] = None, teacher_id: Optional[int] = None, db: Session = Depends(get_db),
                          current_user=Depends(require_admin)):
 
     # default to current semester if no semester_id provided
@@ -528,6 +528,11 @@ def get_course_offerings(semester_id: Optional[int] = None, db: Session = Depend
         )
         .where(CourseOffering.semester_id == semester_id)
     )
+    if teacher_id:
+        teacher = db.execute(select(Teacher).where(Teacher.id == teacher_id))
+        if not teacher:
+            raise HTTPException(status_code=404, detail=f"teacher with id {teacher_id} not found")
+        stmt = stmt.where(CourseOffering.teacher_id == teacher_id)
     results = db.execute(stmt).scalars().all()
 
     return results
@@ -680,15 +685,12 @@ def delete_enrollment(enrollment_id: int, db: Session = Depends(get_db),
     db.commit()
     
 @router.get('/enrollments', response_model=List[schemas.EnrollmentOut])
-def get_enrollments(section_id: Optional[int] = None, semester_id: Optional[int] = None,
-                    db: Session = Depends(get_db), current_user=Depends(require_admin)):
+def get_enrollments(course_offering_id: int, db: Session = Depends(get_db),
+                    current_user=Depends(require_admin)):
 
-    # default to current semester if not provided
-    if not semester_id:
-        current_semester = db.execute(select(Semester).where(Semester.is_current == True)).scalars().first()
-        if not current_semester:
-            raise HTTPException(status_code=404, detail="no current semester set")
-        semester_id = current_semester.id
+    course_offering = db.get(CourseOffering, course_offering_id)
+    if not course_offering:
+        raise HTTPException(status_code=404, detail=f"course offering with id {course_offering_id} not found")
 
     stmt = (
         select(Enrollment)
@@ -699,13 +701,8 @@ def get_enrollments(section_id: Optional[int] = None, semester_id: Optional[int]
             joinedload(Enrollment.course_offering).joinedload(CourseOffering.semester),
             joinedload(Enrollment.course_offering).joinedload(CourseOffering.teacher).joinedload(Teacher.user)
         )
-        .join(CourseOffering, Enrollment.course_offering_id == CourseOffering.id)
-        .where(CourseOffering.semester_id == semester_id)
+        .where(Enrollment.course_offering_id == course_offering_id)
     )
-
-    if section_id:
-        stmt = stmt.where(CourseOffering.section_id == section_id)
 
     enrollments = db.execute(stmt).scalars().all()
     return enrollments
-
