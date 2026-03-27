@@ -65,8 +65,9 @@ class Section(SQLModel, table=True):
     __tablename__ = "sections"
     
     id: Optional[int] = Field(default=None, primary_key=True)
+    grade: int
     name: str
-    year: int
+    academic_year_start: int
     
     # Relationships
     students: list["Student"] = Relationship(back_populates="section")

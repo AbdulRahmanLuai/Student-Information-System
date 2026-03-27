@@ -119,13 +119,15 @@ class CourseOut(BaseModel):
         
 
 class SectionCreate(BaseModel):
+    grade: int
     name: str
-    year: int
+    academic_year_start: int
 
 class SectionOut(BaseModel):
     id: int
+    grade: int
     name: str
-    year: int
+    academic_year_start: int
 
     class Config:
         from_attributes = True

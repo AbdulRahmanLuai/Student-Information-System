@@ -110,9 +110,9 @@ def populate_sample_data():
 
         # --- Sections ---
         sections = [
-            Section(name="9A", year=2025),
-            Section(name="9B", year=2025),
-            Section(name="10A", year=2025),
+            Section(grade=9, name="A", academic_year_start=2025),
+            Section(grade = 9, name="B", academic_year_start=2025),
+            Section(grade = 10, name="A", academic_year_start=2025),
         ]
         session.add_all(sections)
         session.commit()

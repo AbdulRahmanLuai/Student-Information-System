@@ -176,7 +176,7 @@ def get_courses(department_id: Optional[int] = None, db: Session = Depends(get_d
 def create_section(section_data: schemas.SectionCreate, db: Session = Depends(get_db),
                    current_user=Depends(require_admin)):
 
-    new_section = Section(name=section_data.name, year=section_data.year)
+    new_section = Section(grade=section_data.grade, name=section_data.name, academic_year_start=section_data.academic_year_start)
     db.add(new_section)
     db.commit()
     db.refresh(new_section)
@@ -208,7 +208,7 @@ def create_student(student_data: schemas.StudentCreate, db: Session = Depends(ge
     if not current_semester:
         raise HTTPException(status_code=400, detail="no current semester set")
 
-    if section.year != current_semester.academic_year_start:
+    if section.academic_year_start != current_semester.academic_year_start:
         raise HTTPException(status_code=400, detail=f"section does not belong to the current academic year ({current_semester.academic_year_start})")
 
     new_student = Student(
@@ -243,7 +243,7 @@ def update_student_section(student_id: int, data: schemas.StudentUpdateSection,
     if not new_section:
         raise HTTPException(status_code=404, detail=f"section with id {data.section_id} not found")
 
-    if new_section.year != current_semester.academic_year_start:
+    if new_section.academic_year_start != current_semester.academic_year_start:
         raise HTTPException(status_code=400, detail=f"section does not belong to the current academic year ({current_semester.academic_year_start})")
 
     student.section_id = data.section_id
@@ -468,7 +468,7 @@ def create_course_offering(data: schemas.CourseOfferingCreate, db: Session = Dep
             raise HTTPException(status_code=400, detail="cannot create a course offering for a past semester")
 
     # check that section belongs to current academic year
-    if section.year != semester.academic_year_start:
+    if section.academic_year_start != semester.academic_year_start:
         raise HTTPException(status_code=400, detail=f"section does not belong to the academic year of the selected semester ({semester.academic_year_start})")
     
     # check for duplicate course offering
