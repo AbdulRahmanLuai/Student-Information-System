@@ -36,20 +36,21 @@ from app.config import settings
 from app import schemas
 
 def verify_access_token(token: str, credentials_exception) -> schemas.TokenPayload:
-    print(token)
-
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        
         user_id: str = payload.get("user_id")
-        print(user_id)
-        if user_id is None:
+        user_role: str = payload.get("role")
+
+        if user_id is None or user_role is None:
             raise credentials_exception
+
     except ExpiredSignatureError:
         raise credentials_exception
     except InvalidTokenError:
         raise credentials_exception
 
-    return schemas.TokenPayload(id=user_id)
+    return schemas.TokenPayload(id=user_id, role=user_role)
 
 
 def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(database.get_db)):

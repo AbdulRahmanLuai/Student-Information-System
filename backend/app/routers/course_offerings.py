@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from .. import models, schemas
 from ..database import get_db
 from sqlmodel import Session
@@ -42,18 +42,6 @@ def get_teacher_from_user(user_id: int, db: Session) -> Optional[Teacher]:
 
 router = APIRouter(prefix='/course-offerings', tags=["course-offerings"])
 
-
-from fastapi import APIRouter, Depends, HTTPException, status, Query
-from typing import List, Optional
-from sqlmodel import Session, select
-from sqlalchemy.orm import joinedload
-
-from .. import schemas
-from ..database import get_db
-from ..models import CourseOffering, Teacher, Semester
-from .. import oauth2
-
-router = APIRouter(prefix="/course-offerings", tags=["course-offerings"])
 
 
 def get_teacher_from_user(user_id: int, db: Session) -> Teacher:

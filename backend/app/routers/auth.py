@@ -33,7 +33,7 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
     
     print(user.id, "here")
     # credentials are valid: create access token
-    token = oauth2.create_access_token(data = {"user_id": user.id})
+    token = oauth2.create_access_token(data = {"user_id": user.id, "role": user.role})
     return {"access_token" :token, "token_type": "bearer"}
 
         

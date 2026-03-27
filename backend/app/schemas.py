@@ -22,6 +22,7 @@ class TokenOut(BaseModel):
     
 class TokenPayload(BaseModel):
     id: int
+    role: str
     
 
 class StudentBasic(BaseModel):
