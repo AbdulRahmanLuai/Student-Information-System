@@ -120,21 +120,40 @@ const CourseOfferingDetails = () => {
       {loading && <p>Loading...</p>}
       {error && <p className="text-red-500">{error}</p>}
   
-      <div className="space-y-3">
-        {enrollments.map((e) => {
-          const isCompleted = e.status === "completed";
-  
-          return (
-            <div
-              key={e.id}
-              className={`bg-white p-4 rounded-lg shadow ${
-                isCompleted ? "opacity-70" : ""
-              }`}
-            >
-              <p className="font-semibold">{e.studentName}</p>
-              <p className="text-sm text-gray-600">{e.email}</p>
-              <p>Status: {e.status}</p>
-  
+      <div className="overflow-x-auto">
+  <table className="min-w-full bg-white border rounded-lg shadow">
+    <thead className="bg-gray-100 text-left">
+      <tr>
+        <th className="px-4 py-2 border-b">Student</th>
+        <th className="px-4 py-2 border-b">Email</th>
+        <th className="px-4 py-2 border-b">Status</th>
+        <th className="px-4 py-2 border-b">Final Mark</th>
+        <th className="px-4 py-2 border-b">Note</th>
+      </tr>
+    </thead>
+
+    <tbody>
+      {enrollments.map((e) => {
+        const isCompleted = e.status === "completed";
+
+        return (
+          <tr
+            key={e.id}
+            className={isCompleted ? "bg-gray-50 opacity-70" : ""}
+          >
+            <td className="px-4 py-2 border-b font-medium">
+              {e.studentName}
+            </td>
+
+            <td className="px-4 py-2 border-b text-sm text-gray-600">
+              {e.email}
+            </td>
+
+            <td className="px-4 py-2 border-b">
+              {e.status}
+            </td>
+
+            <td className="px-4 py-2 border-b">
               <input
                 type="number"
                 min={0}
@@ -144,18 +163,19 @@ const CourseOfferingDetails = () => {
                 onChange={(ev) =>
                   handleMarkChange(e.id, ev.target.value)
                 }
-                className="mt-2 border rounded px-2 py-1 w-24 disabled:bg-gray-200"
+                className="border rounded px-2 py-1 w-20 disabled:bg-gray-200"
               />
-  
-              {isCompleted && (
-                <p className="text-sm text-gray-500 mt-1">
-                  Marks are locked
-                </p>
-              )}
-            </div>
-          );
-        })}
-      </div>
+            </td>
+
+            <td className="px-4 py-2 border-b text-sm text-gray-500">
+              {isCompleted ? "Marks are locked" : ""}
+            </td>
+          </tr>
+        );
+      })}
+    </tbody>
+  </table>
+</div>
     </Layout>
   );
 };
