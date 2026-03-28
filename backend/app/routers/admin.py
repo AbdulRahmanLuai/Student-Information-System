@@ -1,16 +1,6 @@
 """
-admin workflow
-
-
-
-Complete/commit all active enrollments from current semester
 TODO: Handle graduating/leaving students
-Create new semester
-Create new sections
-Reassign students to new sections
-Create course offerings (with teacher assignments) for new semester
-Auto-enroll all students per section into their course offerings
-Set new semester as current
+[future change]: add status column for students (active, inactive, etc)
 
 """
 
@@ -350,7 +340,14 @@ def duplicate_offerings(db: Session, last: Semester, new_semester_id: int) -> No
     previous_offerings = db.execute(
         select(CourseOffering).where(CourseOffering.semester_id == last.id)
     ).scalars().all()
-
+    
+    if not previous_offerings:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No course offerings found for semester {last.number} "
+                f"({last.academic_year_start}/{last.academic_year_end})."
+        )
+        
     for offering in previous_offerings:
         new_offering = CourseOffering(
             course_id=offering.course_id,
@@ -376,7 +373,7 @@ def enroll_students(db: Session, new_semester_id: int) -> None:
     for section_id, section_offerings in offerings_by_section.items():
         students = db.execute(
             select(Student).where(Student.section_id == section_id)
-        ).scalars().all()
+        ).scalars().all() # [future change]: filter active students only
 
         for student in students:
             for offering in section_offerings:
@@ -419,11 +416,16 @@ def advance_semester(db: Session = Depends(get_db)):
             )
         )
 
-    new_semester = create_semester(db, last)
-    duplicate_offerings(db, last, new_semester.id)
-    enroll_students(db, new_semester.id)
-    activate_semester(db, new_semester)
-    db.commit()
+    try:
+        new_semester = create_semester(db, last)
+        duplicate_offerings(db, last, new_semester.id)
+        enroll_students(db, new_semester.id)
+        activate_semester(db, new_semester)
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+        
 
     return new_semester
 
