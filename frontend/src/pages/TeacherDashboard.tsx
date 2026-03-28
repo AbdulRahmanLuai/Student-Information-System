@@ -7,6 +7,7 @@ import Layout from "../components/Layout";
 interface CourseOfferingUI {
   id: number;
   courseName: string;
+  sectionGrade: number
   sectionName: string;
   semesterName: string;
 }
@@ -29,6 +30,7 @@ const Dashboard = () => {
           id: co.id,
           courseName: co.course.name,
           sectionName: co.section.name,
+          sectionGrade: co.section.grade,
           semesterName: `${co.semester.academic_year_start}/${co.semester.academic_year_end} - Sem ${co.semester.number}`,
         }));
 
@@ -58,7 +60,7 @@ const Dashboard = () => {
         {courseOfferings.map((co) => (
           <div className="bg-white p-4 rounded-lg shadow hover:shadow-md transition">
             <h2 className="font-semibold text-lg">{co.courseName}</h2>
-            <p className="text-gray-600">Section: {co.sectionName}</p>
+            <p className="text-gray-600">Section: {co.sectionGrade}{co.sectionName} </p>
             <p className="text-gray-600">Semester: {co.semesterName}</p>
   
             <button
