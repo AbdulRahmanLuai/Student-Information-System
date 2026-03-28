@@ -4,7 +4,7 @@ from ..database import get_db
 from sqlmodel import Session
 from sqlalchemy import select, func, update
 from sqlalchemy.orm import joinedload
-from ..models import (Section, Semester, Student, Course, CourseOffering, Enrollment, Teacher, User, Role)
+from ..models import (Section, Semester, Student, Course, CourseOffering, Enrollment, Teacher, User, Role, SemesterStatus)
 from typing import List, Optional
 from .. import oauth2
 
@@ -70,7 +70,7 @@ def get_my_course_offerings(
             raise HTTPException(404, "Semester not found")
     else:
         semester = db.execute(
-            select(Semester).where(Semester.is_current == True)
+            select(Semester).where(Semester.status == SemesterStatus.current)
         ).scalars().first()
 
         if not semester:

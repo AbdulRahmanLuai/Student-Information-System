@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 from typing import Literal, Optional, Union
-from .models import Role
+from .models import Role, SemesterStatus
 from datetime import date
 
 # class CourseOfferingOut(BaseModel):
@@ -160,6 +160,7 @@ class SemesterCreate(BaseModel):
     academic_year_start: Optional[int] = None
     academic_year_end: Optional[int] = None
     number: Optional[int] = None
+    status: SemesterStatus
 
     @model_validator(mode='after')
     def all_or_nothing(self):
@@ -173,7 +174,7 @@ class SemesterOut(BaseModel):
     academic_year_start: int
     academic_year_end: int
     number: int
-    is_current: Optional[bool]
+    status: SemesterStatus
 
     class Config:
         from_attributes = True

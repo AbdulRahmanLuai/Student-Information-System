@@ -3,7 +3,7 @@ from sqlmodel import SQLModel, Session, select
 from app.database import engine
 from app.models import (
     Department, Teacher, Course, Section,
-    Semester, Student, CourseOffering, Enrollment, User, Role
+    Semester, Student, CourseOffering, Enrollment, User, Role, SemesterStatus
 )
 from app.utils.security import hash_password
 
@@ -25,144 +25,144 @@ def populate_sample_data():
 
         # --- Departments ---
         cs_dept = Department(name="Computer Science", code="CS")
-        math_dept = Department(name="Mathematics", code="MATH")
-        physics_dept = Department(name="Physics", code="PHYS")
-        session.add_all([cs_dept, math_dept, physics_dept])
+        sci_dept = Department(name="Science", code="SCI")
+        lang_dept = Department(name="Languages", code="LANG")
+        session.add_all([cs_dept, sci_dept, lang_dept])
         session.commit()
-        for d in [cs_dept, math_dept, physics_dept]:
+        for d in [cs_dept, sci_dept, lang_dept]:
             session.refresh(d)
 
         # --- Admin user ---
-        admin_user_data = {
-            "first_name": "Root",
-            "last_name": "Admin",
-            "email": "root_admin@example.com",
-            "password": "password123",
-            "role": Role.admin
-        }
-        existing_admin = session.exec(
-            select(User).where(User.email == admin_user_data["email"])
-        ).first()
-        if not existing_admin:
-            admin = User(
-                first_name=admin_user_data["first_name"],
-                last_name=admin_user_data["last_name"],
-                email=admin_user_data["email"],
-                hashed_password=hash_password(admin_user_data["password"]),
-                role=admin_user_data["role"]
-            )
-            session.add(admin)
-            session.commit()
-            session.refresh(admin)
-            print(f"Admin created: {admin.email}")
+        admin = User(
+            first_name="Root",
+            last_name="Admin",
+            email="root_admin@example.com",
+            hashed_password=hash_password("password123"),
+            role=Role.admin
+        )
+        session.add(admin)
+        session.commit()
 
-        # --- Teacher users + profiles ---
-        teachers_to_create = [
-            {"first_name": "John", "last_name": "Doe", "email": "john@school.edu", "password": "password123", "role": Role.teacher, "hire_date": date(2020,8,1), "department": cs_dept},
-            {"first_name": "Jane", "last_name": "Smith", "email": "jane@school.edu", "password": "password123", "role": Role.teacher, "hire_date": date(2019,9,1), "department": math_dept},
-            {"first_name": "Alice", "last_name": "Brown", "email": "alice@school.edu", "password": "password123", "role": Role.teacher, "hire_date": date(2021,1,15), "department": physics_dept},
+        # --- Teachers (one per department) ---
+        teachers_data = [
+            ("John",  "Doe",   "john@school.edu",  cs_dept),
+            ("Jane",  "Smith", "jane@school.edu",  sci_dept),
+            ("Alice", "Brown", "alice@school.edu", lang_dept),  # ← Languages covered
         ]
 
         teacher_profiles = []
-        for t in teachers_to_create:
-            existing = session.exec(select(User).where(User.email == t["email"])).first()
-            if existing:
-                print(f"User {t['email']} already exists")
-                continue
-
-            # Create User
+        for fn, ln, email, dept in teachers_data:
             user = User(
-                first_name=t["first_name"],
-                last_name=t["last_name"],
-                email=t["email"],
-                hashed_password=hash_password(t["password"]),
-                role=t["role"]
+                first_name=fn,
+                last_name=ln,
+                email=email,
+                hashed_password=hash_password("password123"),
+                role=Role.teacher
             )
             session.add(user)
             session.commit()
             session.refresh(user)
 
-            # Create Teacher profile
-            teacher_profile = Teacher(
+            teacher = Teacher(
                 user_id=user.id,
-                hire_date=t["hire_date"],
-                department_id=t["department"].id
+                hire_date=date(2020, 1, 1),
+                department_id=dept.id
             )
-            session.add(teacher_profile)
+            session.add(teacher)
             session.commit()
-            session.refresh(teacher_profile)
-            teacher_profiles.append(teacher_profile)
-
-            print(f"Teacher {user.email} created with profile")
+            session.refresh(teacher)
+            teacher_profiles.append((teacher, dept))
 
         # --- Courses ---
-        courses = [
-            Course(name="Intro to Programming", code="CS101", department_id=cs_dept.id),
-            Course(name="Data Structures", code="CS102", department_id=cs_dept.id),
-            Course(name="Calculus I", code="MATH101", department_id=math_dept.id),
-            Course(name="Linear Algebra", code="MATH102", department_id=math_dept.id),
-            Course(name="Physics I", code="PHYS101", department_id=physics_dept.id),
+        cs_courses   = [Course(name="Math",    code="MATH101", department_id=cs_dept.id)]
+        sci_courses  = [
+            Course(name="Physics", code="PHY101",  department_id=sci_dept.id),
+            Course(name="Biology", code="BIO101",  department_id=sci_dept.id),
         ]
-        session.add_all(courses)
+        lang_courses = [Course(name="English", code="ENG101",  department_id=lang_dept.id)]
+
+        all_courses = cs_courses + sci_courses + lang_courses
+        session.add_all(all_courses)
         session.commit()
-        for c in courses:
+        for c in all_courses:
             session.refresh(c)
 
-        # --- Sections ---
-        sections = [
-            Section(grade=9, name="A", academic_year_start=2025),
-            Section(grade = 9, name="B", academic_year_start=2025),
-            Section(grade = 10, name="A", academic_year_start=2025),
-        ]
-        session.add_all(sections)
-        session.commit()
-        for s in sections:
-            session.refresh(s)
+        # Department → courses mapping
+        dept_courses = {
+            cs_dept.id:   cs_courses,
+            sci_dept.id:  sci_courses,
+            lang_dept.id: lang_courses,
+        }
 
-        # --- Semesters ---
-        semesters = [
-            Semester(number=1, academic_year_start=2025, academic_year_end=2026),
-            Semester(number=2, academic_year_start=2025, academic_year_end=2026),
-        ]
-        session.add_all(semesters)
-        session.commit()
-        for sem in semesters:
-            session.refresh(sem)
+        # --- Sections (grades 10–11, A and B) ---
+        sections = []
+        for grade in [10, 11]:
+            for sec_name in ["A", "B"]:
+                sec = Section(grade=grade, name=sec_name, academic_year_start=2025)
+                session.add(sec)
+                session.commit()
+                session.refresh(sec)
+                sections.append(sec)
 
-        # --- Students ---
-        students = [
-            Student(first_name="Alice", last_name="Johnson", email="alice.j@student.edu", enrollment_date=date(2024,9,1), section_id=sections[0].id),
-            Student(first_name="Bob", last_name="Williams", email="bob.w@student.edu", enrollment_date=date(2024,9,1), section_id=sections[0].id),
-            Student(first_name="Charlie", last_name="Davis", email="charlie.d@student.edu", enrollment_date=date(2024,9,1), section_id=sections[1].id),
-        ]
-        session.add_all(students)
+        # --- One Semester ---
+        semester = Semester(
+            number=1,
+            academic_year_start=2025,
+            academic_year_end=2026,
+            status=SemesterStatus.current
+        )
+        session.add(semester)
         session.commit()
-        for st in students:
-            session.refresh(st)
+        session.refresh(semester)
 
-        # --- Course Offerings ---
-        course_offerings = [
-            CourseOffering(course_id=courses[0].id, section_id=sections[0].id, semester_id=semesters[0].id, teacher_id=teacher_profiles[0].id),
-            CourseOffering(course_id=courses[2].id, section_id=sections[0].id, semester_id=semesters[0].id, teacher_id=teacher_profiles[1].id),
-            CourseOffering(course_id=courses[4].id, section_id=sections[1].id, semester_id=semesters[0].id, teacher_id=teacher_profiles[2].id),
-        ]
-        session.add_all(course_offerings)
-        session.commit()
-        for co in course_offerings:
-            session.refresh(co)
+        # --- Students (3 per section) ---
+        students = []
+        student_counter = 1
+        for sec in sections:
+            for _ in range(3):
+                st = Student(
+                    first_name=f"Student{student_counter}",
+                    last_name="Test",
+                    email=f"student{student_counter}@school.edu",
+                    enrollment_date=date(2024, 9, 1),
+                    section_id=sec.id
+                )
+                session.add(st)
+                session.commit()
+                session.refresh(st)
+                students.append(st)
+                student_counter += 1
+
+        # --- Course Offerings (teacher → their dept's courses × all sections) ---
+        course_offerings = []
+        for teacher, dept in teacher_profiles:
+            for course in dept_courses.get(dept.id, []):
+                for sec in sections:
+                    co = CourseOffering(
+                        course_id=course.id,
+                        section_id=sec.id,
+                        semester_id=semester.id,
+                        teacher_id=teacher.id
+                    )
+                    session.add(co)
+                    session.commit()
+                    session.refresh(co)
+                    course_offerings.append(co)
 
         # --- Enrollments ---
-        enrollments = [
-            Enrollment(student_id=students[0].id, course_offering_id=course_offerings[0].id, enrollment_date=date(2025,1,10), status="active"),
-            Enrollment(student_id=students[0].id, course_offering_id=course_offerings[1].id, enrollment_date=date(2025,1,10), status="active"),
-            Enrollment(student_id=students[1].id, course_offering_id=course_offerings[0].id, enrollment_date=date(2025,1,10), status="active"),
-            Enrollment(student_id=students[2].id, course_offering_id=course_offerings[2].id, enrollment_date=date(2025,1,10), status="active"),
-        ]
-        session.add_all(enrollments)
+        for st in students:
+            for co in course_offerings:
+                if co.section_id == st.section_id:
+                    enrollment = Enrollment(
+                        student_id=st.id,
+                        course_offering_id=co.id,
+                        enrollment_date=date(2025, 1, 10),
+                        status="active"
+                    )
+                    session.add(enrollment)
+
         session.commit()
-
         print("Sample data populated successfully!")
-
 
 if __name__ == "__main__":
     create_db_and_tables()

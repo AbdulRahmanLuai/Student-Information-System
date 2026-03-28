@@ -73,20 +73,21 @@ class Section(SQLModel, table=True):
     students: list["Student"] = Relationship(back_populates="section")
     course_offerings: list["CourseOffering"] = Relationship(back_populates="section")
 
+class SemesterStatus(str, Enum):
+    upcoming = "upcoming"
+    current = "current"
+    completed = "completed"
 
 class Semester(SQLModel, table=True):
     __tablename__ = "semesters"
     
     id: Optional[int] = Field(default=None, primary_key=True)
-    # name: str
     academic_year_start: int
     academic_year_end: int
     number: int
-    is_current: Optional[bool] = False
+    status: SemesterStatus
 
-    # Relationships
     course_offerings: list["CourseOffering"] = Relationship(back_populates="semester")
-
 
 class Student(SQLModel, table=True):
     __tablename__ = "students"

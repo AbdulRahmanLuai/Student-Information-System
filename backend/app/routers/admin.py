@@ -21,11 +21,12 @@ from ..database import get_db
 from sqlmodel import Session
 from sqlalchemy import select, func, update, or_, and_
 from sqlalchemy.orm import joinedload
-from ..models import (Section, Semester, Student, Course, CourseOffering, Enrollment, Teacher, User, Role, Department)
+from ..models import (Section, Semester, Student, Course, CourseOffering, Enrollment, Teacher, User, Role, Department, SemesterStatus)
 from typing import List, Optional
 from .. import oauth2
 import secrets
 from ..utils.security import pwd_context
+from datetime import date
 
 def require_admin(current_user = Depends(oauth2.get_current_user)):
     if current_user.role != Role.admin:
@@ -204,7 +205,7 @@ def create_student(student_data: schemas.StudentCreate, db: Session = Depends(ge
     if existing_student:
         raise HTTPException(status_code=400, detail=f"email {student_data.email} is already registered")
     
-    current_semester = db.execute(select(Semester).where(Semester.is_current == True)).scalars().first()
+    current_semester = db.execute(select(Semester).where(Semester.status == SemesterStatus.current)).scalars().first()
     if not current_semester:
         raise HTTPException(status_code=400, detail="no current semester set")
 
@@ -234,7 +235,7 @@ def update_student_section(student_id: int, data: schemas.StudentUpdateSection,
         raise HTTPException(status_code=404, detail=f"student with id {student_id} not found")
 
     # get current semester
-    current_semester = db.execute(select(Semester).where(Semester.is_current == True)).scalars().first()
+    current_semester = db.execute(select(Semester).where(Semester.status == SemesterStatus.current)).scalars().first()
     if not current_semester:
         raise HTTPException(status_code=404, detail="no current semester set")
 
@@ -276,161 +277,162 @@ def get_student(student_id: int, db: Session = Depends(get_db), current_user=Dep
 
 # ── Semesters ─────────────────────────────────────────────────────────────────
 
-@router.post('/semesters', response_model=schemas.SemesterOut, status_code=status.HTTP_201_CREATED)
-def create_semester(semester_data: schemas.SemesterCreate = schemas.SemesterCreate(),
-                    db: Session = Depends(get_db), current_user=Depends(require_admin)):
 
-    current_semester = db.execute(select(Semester).where(Semester.is_current == True)).scalars().first()
-    future_semester = db.execute(
-    select(Semester).where(
-        Semester.is_current == False,
-        or_(
-            Semester.academic_year_start > current_semester.academic_year_start,
-            and_(
-                Semester.academic_year_start == current_semester.academic_year_start,
-                Semester.number > current_semester.number
-            )
+@router.post("/semesters/end", response_model=schemas.SemesterOut)
+def end_semester(db: Session = Depends(get_db)):
+    semester = db.execute(select(Semester).where(Semester.status == SemesterStatus.current)).scalars().first()
+    if not semester:
+        raise HTTPException(status_code=404, detail="No active semester found")
+
+    active_enrollment = db.execute(
+        select(Enrollment)
+        .join(CourseOffering, Enrollment.course_offering_id == CourseOffering.id)
+        .where(
+            CourseOffering.semester_id == semester.id,
+            Enrollment.status == "active"
         )
-    )
-).scalars().first() if current_semester else None
+    ).scalars().first()
 
-    data_provided = any([semester_data.academic_year_start, semester_data.academic_year_end, semester_data.number])
+    if active_enrollment:
+        raise HTTPException(status_code=400, detail="Cannot end semester with active enrollments")
 
-    # --- no data provided: auto-generate ---
-    if not data_provided:
-        if not current_semester:
-            raise HTTPException(status_code=400, detail="no current semester exists, data must be provided manually")
-        if future_semester:
-            raise HTTPException(status_code=400, detail="a future semester already exists, set it as current before creating another")
+    semester.status = SemesterStatus.completed
+    db.commit()
+    db.refresh(semester)
 
-        if current_semester.number < 3:
-            next_number = current_semester.number + 1
-            next_year_start = current_semester.academic_year_start
-            next_year_end = current_semester.academic_year_end
-        else:
-            next_number = 1
-            next_year_start = current_semester.academic_year_start + 1
-            next_year_end = current_semester.academic_year_end + 1
+    return semester
 
-    # --- data provided ---
-    else:
-        
-        # first semester ever
-        if not current_semester:
-            any_semester = db.execute(select(Semester)).scalars().first()
-            if any_semester:
-                raise HTTPException(status_code=400, detail="a future semester already exists, set it as current before creating another")
 
-        # current semester exists, validate sequential
-        else:
-            if future_semester:
-                raise HTTPException(status_code=400, detail="a future semester already exists, set it as current before creating another")
 
-            if current_semester.number < 3:
-                expected_number = current_semester.number + 1
-                expected_year_start = current_semester.academic_year_start
-                expected_year_end = current_semester.academic_year_end
-            else:
-                expected_number = 1
-                expected_year_start = current_semester.academic_year_start + 1
-                expected_year_end = current_semester.academic_year_end + 1
+def get_active_semester(db: Session) -> Semester | None:
+    # Returns the currently active semester, or None if none is active
+    return db.execute(
+        select(Semester).where(Semester.status == SemesterStatus.current)
+    ).scalars().first()
 
-            if not (semester_data.number == expected_number and
-                    semester_data.academic_year_start == expected_year_start and
-                    semester_data.academic_year_end == expected_year_end):
-                raise HTTPException(status_code=400,
-                                    detail=f"semester data is not sequential. expected: number={expected_number}, "
-                                           f"academic_year_start={expected_year_start}, academic_year_end={expected_year_end}")
 
-        next_number = semester_data.number
-        next_year_start = semester_data.academic_year_start
-        next_year_end = semester_data.academic_year_end
+def get_last_completed_semester(db: Session) -> Semester:
+    # Returns the most recent completed semester ordered by year then number
+    semester = db.execute(
+        select(Semester)
+        .where(Semester.status == SemesterStatus.completed)
+        .order_by(Semester.academic_year_start.desc(), Semester.number.desc())
+    ).scalars().first()
+
+    if not semester:
+        raise HTTPException(
+            status_code=404,
+            detail="No completed semester found to advance from."
+        )
+
+    return semester
+
+
+def create_semester(db: Session, last: Semester) -> Semester:
+    # Creates the next semester in sequence as upcoming, rolling over year if needed
+    next_number = last.number + 1 if last.number < 3 else 1
+    next_year_start = last.academic_year_start if next_number > 1 else last.academic_year_start + 1
+    next_year_end = last.academic_year_end if next_number > 1 else last.academic_year_end + 1
 
     new_semester = Semester(
+        number=next_number,
         academic_year_start=next_year_start,
         academic_year_end=next_year_end,
-        number=next_number,
-        is_current=False
+        status=SemesterStatus.upcoming,
     )
     db.add(new_semester)
+    db.flush()
+    return new_semester
+
+
+def duplicate_offerings(db: Session, last: Semester, new_semester_id: int) -> None:
+    # Copies all course offerings from the last semester into the new one
+    previous_offerings = db.execute(
+        select(CourseOffering).where(CourseOffering.semester_id == last.id)
+    ).scalars().all()
+
+    for offering in previous_offerings:
+        new_offering = CourseOffering(
+            course_id=offering.course_id,
+            section_id=offering.section_id,
+            teacher_id=offering.teacher_id,
+            semester_id=new_semester_id,
+        )
+        db.add(new_offering)
+
+    db.flush()
+
+
+def enroll_students(db: Session, new_semester_id: int) -> None:
+    # Enrolls all students into the new semester's offerings, grouped by section
+    new_offerings = db.execute(
+        select(CourseOffering).where(CourseOffering.semester_id == new_semester_id)
+    ).scalars().all()
+
+    offerings_by_section: dict[int, list[CourseOffering]] = {}
+    for offering in new_offerings:
+        offerings_by_section.setdefault(offering.section_id, []).append(offering)
+
+    for section_id, section_offerings in offerings_by_section.items():
+        students = db.execute(
+            select(Student).where(Student.section_id == section_id)
+        ).scalars().all()
+
+        for student in students:
+            for offering in section_offerings:
+                enrollment = Enrollment(
+                    student_id=student.id,
+                    course_offering_id=offering.id,
+                    enrollment_date=date.today(),
+                    status="active",
+                )
+                db.add(enrollment)
+
+    db.flush()
+
+
+def activate_semester(db: Session, new_semester: Semester) -> None:
+    # Sets the new semester status from upcoming to current
+    new_semester.status = SemesterStatus.current
+    db.add(new_semester)
+    db.flush()
+
+
+@router.post("/semesters/advance", response_model=schemas.SemesterOut)
+def advance_semester(db: Session = Depends(get_db)):
+    # Advances from the last completed semester to the next one within the same academic year
+    if get_active_semester(db):
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot advance: a semester is currently active. Complete it first."
+        )
+
+    last = get_last_completed_semester(db)
+
+    if last.number >= 3:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"Semester {last.number} is the last semester of academic year "
+                f"{last.academic_year_start}/{last.academic_year_end}. "
+                "Please trigger a new academic year migration instead."
+            )
+        )
+
+    new_semester = create_semester(db, last)
+    duplicate_offerings(db, last, new_semester.id)
+    enroll_students(db, new_semester.id)
+    activate_semester(db, new_semester)
     db.commit()
-    db.refresh(new_semester)
 
     return new_semester
+
 
 @router.get('/semesters', response_model=List[schemas.SemesterOut])
 def get_semesters(db: Session = Depends(get_db), current_user=Depends(require_admin)):
     semesters = db.execute(select(Semester)).scalars().all()
     return semesters
 
-@router.put('/semesters/activate', response_model=schemas.SemesterOut)
-def activate_new_semester(db: Session = Depends(get_db), current_user=Depends(require_admin)):
-
-    current_semester = db.execute(select(Semester).where(Semester.is_current == True)).scalars().first()
-
-    # check for active enrollments only if a current semester exists
-    if current_semester:
-        stmt = (
-            select(
-                CourseOffering,
-                Course,
-                Teacher,
-                User,
-                func.count(Enrollment.id).label('active_enrollments_count')
-            )
-            .join(Enrollment, Enrollment.course_offering_id == CourseOffering.id)
-            .join(Course, CourseOffering.course_id == Course.id)
-            .join(Teacher, CourseOffering.teacher_id == Teacher.id)
-            .join(User, Teacher.user_id == User.id)
-            .where(
-                Enrollment.status == 'active',
-                CourseOffering.semester_id == current_semester.id
-            )
-            .group_by(CourseOffering.id, Course.id, Teacher.id, User.id)
-        )
-        results = db.execute(stmt).all()
-
-        if results:
-            pending = [
-                schemas.PendingCourseOfferingOut(
-                    course_offering_id=course_offering.id,
-                    course_name=course.name,
-                    teacher_first_name=user.first_name,
-                    teacher_last_name=user.last_name,
-                    teacher_email=user.email,
-                    active_enrollments_count=count
-                )
-                for course_offering, course, teacher, user, count in results
-            ]
-
-            raise HTTPException(
-                status_code=400,
-                detail={
-                    "message": "cannot activate new semester, the following course offerings still have active enrollments",
-                    "pending_course_offerings": [p.model_dump() for p in pending]
-                }
-            )
-
-    # find most recent semester by time
-    most_recent = db.execute(
-        select(Semester)
-        .order_by(Semester.academic_year_start.desc(), Semester.number.desc())
-        .limit(1)
-    ).scalars().first()
-
-    if not most_recent:
-        raise HTTPException(status_code=400, detail="no semesters exist yet")
-    if most_recent.is_current:
-        raise HTTPException(status_code=400, detail="no future semester exists, create one before activating")
-
-    if current_semester:
-        current_semester.is_current = False
-
-    most_recent.is_current = True
-    db.commit()
-    db.refresh(most_recent)
-
-    return most_recent
 
 # ── Course Offerings ──────────────────────────────────────────────────────────
 
@@ -456,7 +458,7 @@ def create_course_offering(data: schemas.CourseOfferingCreate, db: Session = Dep
         raise HTTPException(status_code=404, detail=f"teacher with id {data.teacher_id} not found")
     
     # check that the semester is not in the past
-    current_semester = db.execute(select(Semester).where(Semester.is_current == True)).scalars().first()
+    current_semester = db.execute(select(Semester).where(Semester.status == SemesterStatus.current)).scalars().first()
 
     if current_semester:
         is_past = (
@@ -513,7 +515,7 @@ def get_course_offerings(semester_id: Optional[int] = None, teacher_id: Optional
 
     # default to current semester if no semester_id provided
     if not semester_id:
-        current_semester = db.execute(select(Semester).where(Semester.is_current == True)).scalars().first()
+        current_semester = db.execute(select(Semester).where(Semester.status == SemesterStatus.current)).scalars().first()
         if not current_semester:
             raise HTTPException(status_code=404, detail="no current semester set")
         semester_id = current_semester.id
@@ -539,150 +541,150 @@ def get_course_offerings(semester_id: Optional[int] = None, teacher_id: Optional
 
 # ── Enrollments ───────────────────────────────────────────────────────────────
 
-@router.post('/enrollments/section', response_model=List[schemas.EnrollmentOut], status_code=status.HTTP_201_CREATED)
-def enroll_section(data: schemas.SectionEnrollmentCreate, db: Session = Depends(get_db),
-                   current_user=Depends(require_admin)):
+# @router.post('/enrollments/section', response_model=List[schemas.EnrollmentOut], status_code=status.HTTP_201_CREATED)
+# def enroll_section(data: schemas.SectionEnrollmentCreate, db: Session = Depends(get_db),
+#                    current_user=Depends(require_admin)):
 
-    # validate section exists
-    section = db.get(Section, data.section_id)
-    if not section:
-        raise HTTPException(status_code=404, detail=f"section with id {data.section_id} not found")
+#     # validate section exists
+#     section = db.get(Section, data.section_id)
+#     if not section:
+#         raise HTTPException(status_code=404, detail=f"section with id {data.section_id} not found")
 
-    # validate semester exists
-    semester = db.get(Semester, data.semester_id)
-    if not semester:
-        raise HTTPException(status_code=404, detail=f"semester with id {data.semester_id} not found")
+#     # validate semester exists
+#     semester = db.get(Semester, data.semester_id)
+#     if not semester:
+#         raise HTTPException(status_code=404, detail=f"semester with id {data.semester_id} not found")
 
-    if not semester.is_current:
-        raise HTTPException(status_code=400, detail="enrollments can only be created for the current semester")
+#     if not semester.is_current:
+#         raise HTTPException(status_code=400, detail="enrollments can only be created for the current semester")
 
-    # get all course offerings for this section in the given semester
-    course_offerings = db.execute(
-        select(CourseOffering).where(
-            CourseOffering.section_id == data.section_id,
-            CourseOffering.semester_id == data.semester_id
-        )
-    ).scalars().all()
-    if not course_offerings:
-        raise HTTPException(status_code=404, detail="no course offerings found for this section in the given semester")
+#     # get all course offerings for this section in the given semester
+#     course_offerings = db.execute(
+#         select(CourseOffering).where(
+#             CourseOffering.section_id == data.section_id,
+#             CourseOffering.semester_id == data.semester_id
+#         )
+#     ).scalars().all()
+#     if not course_offerings:
+#         raise HTTPException(status_code=404, detail="no course offerings found for this section in the given semester")
 
-    # get all students in the section
-    students = db.execute(
-        select(Student).where(Student.section_id == data.section_id)
-    ).scalars().all()
-    if not students:
-        raise HTTPException(status_code=404, detail="no students found in this section")
+#     # get all students in the section
+#     students = db.execute(
+#         select(Student).where(Student.section_id == data.section_id)
+#     ).scalars().all()
+#     if not students:
+#         raise HTTPException(status_code=404, detail="no students found in this section")
 
-    # enroll all students in all course offerings, skip duplicates
-    new_enrollments = []
-    for student in students:
-        for course_offering in course_offerings:
-            existing = db.execute(
-                select(Enrollment).where(
-                    Enrollment.student_id == student.id,
-                    Enrollment.course_offering_id == course_offering.id
-                )
-            ).scalars().first()
-            if not existing:
-                enrollment = Enrollment(
-                    student_id=student.id,
-                    course_offering_id=course_offering.id,
-                    status='active'
-                )
-                db.add(enrollment)
-                new_enrollments.append(enrollment)
+#     # enroll all students in all course offerings, skip duplicates
+#     new_enrollments = []
+#     for student in students:
+#         for course_offering in course_offerings:
+#             existing = db.execute(
+#                 select(Enrollment).where(
+#                     Enrollment.student_id == student.id,
+#                     Enrollment.course_offering_id == course_offering.id
+#                 )
+#             ).scalars().first()
+#             if not existing:
+#                 enrollment = Enrollment(
+#                     student_id=student.id,
+#                     course_offering_id=course_offering.id,
+#                     status='active'
+#                 )
+#                 db.add(enrollment)
+#                 new_enrollments.append(enrollment)
 
-    db.commit()
+#     db.commit()
 
-    # re-fetch with all relationships eagerly loaded
-    enrollment_ids = [e.id for e in new_enrollments]
-    stmt = (
-        select(Enrollment)
-        .options(
-            joinedload(Enrollment.student),
-            joinedload(Enrollment.course_offering).joinedload(CourseOffering.course).joinedload(Course.department),
-            joinedload(Enrollment.course_offering).joinedload(CourseOffering.section),
-            joinedload(Enrollment.course_offering).joinedload(CourseOffering.semester),
-            joinedload(Enrollment.course_offering).joinedload(CourseOffering.teacher).joinedload(Teacher.user)
-        )
-        .where(Enrollment.id.in_(enrollment_ids))
-    )
-    new_enrollments = db.execute(stmt).scalars().all()
+#     # re-fetch with all relationships eagerly loaded
+#     enrollment_ids = [e.id for e in new_enrollments]
+#     stmt = (
+#         select(Enrollment)
+#         .options(
+#             joinedload(Enrollment.student),
+#             joinedload(Enrollment.course_offering).joinedload(CourseOffering.course).joinedload(Course.department),
+#             joinedload(Enrollment.course_offering).joinedload(CourseOffering.section),
+#             joinedload(Enrollment.course_offering).joinedload(CourseOffering.semester),
+#             joinedload(Enrollment.course_offering).joinedload(CourseOffering.teacher).joinedload(Teacher.user)
+#         )
+#         .where(Enrollment.id.in_(enrollment_ids))
+#     )
+#     new_enrollments = db.execute(stmt).scalars().all()
 
-    return new_enrollments
+#     return new_enrollments
 
-@router.post('/enrollments', response_model=schemas.EnrollmentOut, status_code=status.HTTP_201_CREATED)
-def enroll_student(data: schemas.EnrollmentCreate, db: Session = Depends(get_db),
-                   current_user=Depends(require_admin)):
+# @router.post('/enrollments', response_model=schemas.EnrollmentOut, status_code=status.HTTP_201_CREATED)
+# def enroll_student(data: schemas.EnrollmentCreate, db: Session = Depends(get_db),
+#                    current_user=Depends(require_admin)):
 
-    student = db.get(Student, data.student_id)
-    if not student:
-        raise HTTPException(status_code=404, detail=f"student with id {data.student_id} not found")
+#     student = db.get(Student, data.student_id)
+#     if not student:
+#         raise HTTPException(status_code=404, detail=f"student with id {data.student_id} not found")
 
-    course_offering = db.get(CourseOffering, data.course_offering_id)
-    if not course_offering:
-        raise HTTPException(status_code=404, detail=f"course offering with id {data.course_offering_id} not found")
+#     course_offering = db.get(CourseOffering, data.course_offering_id)
+#     if not course_offering:
+#         raise HTTPException(status_code=404, detail=f"course offering with id {data.course_offering_id} not found")
 
-    if course_offering.section_id != student.section_id:
-        raise HTTPException(status_code=400, detail="course offering does not belong to the student's section")
+#     if course_offering.section_id != student.section_id:
+#         raise HTTPException(status_code=400, detail="course offering does not belong to the student's section")
 
-    # check that the course offering belongs to the current semester
-    semester = db.get(Semester, course_offering.semester_id)
-    if not semester.is_current:
-        raise HTTPException(status_code=400, detail="enrollments can only be created for the current semester")
+#     # check that the course offering belongs to the current semester
+#     semester = db.get(Semester, course_offering.semester_id)
+#     if not semester.is_current:
+#         raise HTTPException(status_code=400, detail="enrollments can only be created for the current semester")
 
-    existing = db.execute(
-        select(Enrollment).where(
-            Enrollment.student_id == data.student_id,
-            Enrollment.course_offering_id == data.course_offering_id
-        )
-    ).scalars().first()
-    if existing:
-        raise HTTPException(status_code=400, detail="student is already enrolled in this course offering")
+#     existing = db.execute(
+#         select(Enrollment).where(
+#             Enrollment.student_id == data.student_id,
+#             Enrollment.course_offering_id == data.course_offering_id
+#         )
+#     ).scalars().first()
+#     if existing:
+#         raise HTTPException(status_code=400, detail="student is already enrolled in this course offering")
 
-    new_enrollment = Enrollment(
-        student_id=data.student_id,
-        course_offering_id=data.course_offering_id,
-        status='active'
-    )
-    db.add(new_enrollment)
-    db.commit()
+#     new_enrollment = Enrollment(
+#         student_id=data.student_id,
+#         course_offering_id=data.course_offering_id,
+#         status='active'
+#     )
+#     db.add(new_enrollment)
+#     db.commit()
 
-    stmt = (
-        select(Enrollment)
-        .options(
-            joinedload(Enrollment.student),
-            joinedload(Enrollment.course_offering).joinedload(CourseOffering.course).joinedload(Course.department),
-            joinedload(Enrollment.course_offering).joinedload(CourseOffering.section),
-            joinedload(Enrollment.course_offering).joinedload(CourseOffering.semester),
-            joinedload(Enrollment.course_offering).joinedload(CourseOffering.teacher).joinedload(Teacher.user)
-        )
-        .where(Enrollment.id == new_enrollment.id)
-    )
-    new_enrollment = db.execute(stmt).scalars().first()
+#     stmt = (
+#         select(Enrollment)
+#         .options(
+#             joinedload(Enrollment.student),
+#             joinedload(Enrollment.course_offering).joinedload(CourseOffering.course).joinedload(Course.department),
+#             joinedload(Enrollment.course_offering).joinedload(CourseOffering.section),
+#             joinedload(Enrollment.course_offering).joinedload(CourseOffering.semester),
+#             joinedload(Enrollment.course_offering).joinedload(CourseOffering.teacher).joinedload(Teacher.user)
+#         )
+#         .where(Enrollment.id == new_enrollment.id)
+#     )
+#     new_enrollment = db.execute(stmt).scalars().first()
 
-    return new_enrollment
+#     return new_enrollment
 
 
-@router.delete('/enrollments/{enrollment_id}', status_code=status.HTTP_204_NO_CONTENT)
-def delete_enrollment(enrollment_id: int, db: Session = Depends(get_db),
-                      current_user=Depends(require_admin)):
+# @router.delete('/enrollments/{enrollment_id}', status_code=status.HTTP_204_NO_CONTENT)
+# def delete_enrollment(enrollment_id: int, db: Session = Depends(get_db),
+#                       current_user=Depends(require_admin)):
 
-    enrollment = db.get(Enrollment, enrollment_id)
-    if not enrollment:
-        raise HTTPException(status_code=404, detail=f"enrollment with id {enrollment_id} not found")
+#     enrollment = db.get(Enrollment, enrollment_id)
+#     if not enrollment:
+#         raise HTTPException(status_code=404, detail=f"enrollment with id {enrollment_id} not found")
 
-    if enrollment.status != 'active':
-        raise HTTPException(status_code=400, detail="only active enrollments can be deleted")
+#     if enrollment.status != 'active':
+#         raise HTTPException(status_code=400, detail="only active enrollments can be deleted")
 
-    # check that the enrollment belongs to the current semester
-    course_offering = db.get(CourseOffering, enrollment.course_offering_id)
-    semester = db.get(Semester, course_offering.semester_id)
-    if not semester.is_current:
-        raise HTTPException(status_code=400, detail="only enrollments from the current semester can be deleted")
+#     # check that the enrollment belongs to the current semester
+#     course_offering = db.get(CourseOffering, enrollment.course_offering_id)
+#     semester = db.get(Semester, course_offering.semester_id)
+#     if not semester.is_current:
+#         raise HTTPException(status_code=400, detail="only enrollments from the current semester can be deleted")
 
-    db.delete(enrollment)
-    db.commit()
+#     db.delete(enrollment)
+#     db.commit()
     
 @router.get('/enrollments', response_model=List[schemas.EnrollmentOut])
 def get_enrollments(course_offering_id: int, db: Session = Depends(get_db),
