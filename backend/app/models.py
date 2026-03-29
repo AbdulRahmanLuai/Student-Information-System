@@ -48,13 +48,21 @@ class Teacher(SQLModel, table=True):
     course_offerings: list["CourseOffering"] = Relationship(back_populates="teacher")
 
 
+from enum import Enum
+
+class CourseStatus(str, Enum):
+    active = "active"
+    inactive = "inactive"
+
 class Course(SQLModel, table=True):
     __tablename__ = "courses"
     
     id: Optional[int] = Field(default=None, primary_key=True)
     name: str
     code: str
+    grade: int
     department_id: Optional[int] = Field(default=None, foreign_key="departments.id")
+    status: CourseStatus = Field(default=CourseStatus.active)
     
     # Relationships
     department: Optional[Department] = Relationship(back_populates="courses")

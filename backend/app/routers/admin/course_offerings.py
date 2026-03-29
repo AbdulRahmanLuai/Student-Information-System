@@ -46,6 +46,9 @@ def create_course_offering(data: schemas.CourseOfferingCreate, db: Session = Dep
     if section.academic_year_start != semester.academic_year_start:
         raise HTTPException(status_code=400, detail=f"section does not belong to the academic year of the selected semester ({semester.academic_year_start})")
     
+    if section.grade != course.grade:
+        raise HTTPException(status_code=400, detail=f"course is for grade {course.grade} but section is grade {section.grade}")
+    
     # check for duplicate course offering
     existing = db.execute(
         select(CourseOffering).where(

@@ -47,7 +47,7 @@ def populate_sample_data():
         teachers_data = [
             ("John",  "Doe",   "john@school.edu",  cs_dept),
             ("Jane",  "Smith", "jane@school.edu",  sci_dept),
-            ("Alice", "Brown", "alice@school.edu", lang_dept),  # ← Languages covered
+            ("Alice", "Brown", "alice@school.edu", lang_dept),
         ]
 
         teacher_profiles = []
@@ -74,12 +74,18 @@ def populate_sample_data():
             teacher_profiles.append((teacher, dept))
 
         # --- Courses ---
-        cs_courses   = [Course(name="Math",    code="MATH101", department_id=cs_dept.id)]
-        sci_courses  = [
-            Course(name="Physics", code="PHY101",  department_id=sci_dept.id),
-            Course(name="Biology", code="BIO101",  department_id=sci_dept.id),
+        cs_courses   = [
+            Course(name="Math",    code="MATH101", grade=10, department_id=cs_dept.id),
+            Course(name="Math",    code="MATH102", grade=11, department_id=cs_dept.id),
         ]
-        lang_courses = [Course(name="English", code="ENG101",  department_id=lang_dept.id)]
+        sci_courses  = [
+            Course(name="Physics", code="PHY101", grade=10, department_id=sci_dept.id),
+            Course(name="Biology", code="BIO101", grade=11, department_id=sci_dept.id),
+        ]
+        lang_courses = [
+            Course(name="English", code="ENG101", grade=10, department_id=lang_dept.id),
+            Course(name="English", code="ENG102", grade=11, department_id=lang_dept.id),
+        ]
 
         all_courses = cs_courses + sci_courses + lang_courses
         session.add_all(all_courses)
@@ -133,21 +139,22 @@ def populate_sample_data():
                 students.append(st)
                 student_counter += 1
 
-        # --- Course Offerings (teacher → their dept's courses × all sections) ---
+        # --- Course Offerings (only match section grade to course grade) ---
         course_offerings = []
         for teacher, dept in teacher_profiles:
             for course in dept_courses.get(dept.id, []):
                 for sec in sections:
-                    co = CourseOffering(
-                        course_id=course.id,
-                        section_id=sec.id,
-                        semester_id=semester.id,
-                        teacher_id=teacher.id
-                    )
-                    session.add(co)
-                    session.commit()
-                    session.refresh(co)
-                    course_offerings.append(co)
+                    if sec.grade == course.grade:
+                        co = CourseOffering(
+                            course_id=course.id,
+                            section_id=sec.id,
+                            semester_id=semester.id,
+                            teacher_id=teacher.id
+                        )
+                        session.add(co)
+                        session.commit()
+                        session.refresh(co)
+                        course_offerings.append(co)
 
         # --- Enrollments ---
         for st in students:
