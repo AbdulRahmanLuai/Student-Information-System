@@ -97,6 +97,10 @@ class Semester(SQLModel, table=True):
 
     course_offerings: list["CourseOffering"] = Relationship(back_populates="semester")
 
+class StudentStatus(str, Enum):
+    active = "active"
+    inactive = "inactive"
+
 class Student(SQLModel, table=True):
     __tablename__ = "students"
     
@@ -106,6 +110,7 @@ class Student(SQLModel, table=True):
     email: str
     enrollment_date: Optional[date] = None
     section_id: int = Field(foreign_key="sections.id")
+    status: StudentStatus = Field(default=StudentStatus.active)
     
     # Relationships
     section: Optional[Section] = Relationship(back_populates="students")

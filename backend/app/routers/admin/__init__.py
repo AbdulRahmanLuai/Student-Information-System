@@ -1,7 +1,6 @@
 """
 TODO: Handle graduating/leaving students
-[future change]: add status column for students (active, inactive, etc)
-
+TODO: Handle changes in curriculum between years
 """
 
 from fastapi import APIRouter

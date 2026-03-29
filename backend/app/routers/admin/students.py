@@ -3,7 +3,7 @@ from sqlmodel import Session, select
 from typing import List, Optional
 from ... import schemas
 from ...database import get_db
-from ...models import Student, Section, Semester, SemesterStatus
+from ...models import Student, Section, Semester, SemesterStatus, StudentStatus
 from .dependencies import require_admin
 
 router = APIRouter()
@@ -70,16 +70,19 @@ def create_student(student_data: schemas.StudentCreate, db: Session = Depends(ge
 
 
 @router.get('/students', response_model=List[schemas.StudentOut])
-def get_students(section_id: Optional[int] = None, db: Session = Depends(get_db),
+def get_students(section_id: int, db: Session = Depends(get_db),
                  current_user=Depends(require_admin)):
 
-    stmt = select(Student)
-    print(section_id)
-    if section_id:
-        stmt = stmt.where(Student.section_id == section_id)
+    section = db.get(Section, section_id)
+    if not section:
+        raise HTTPException(status_code=404, detail=f"section with id {section_id} not found")
 
-    students = db.execute(stmt).scalars().all()
-    return students
+    stmt = select(Student).where(
+        Student.section_id == section_id,
+        Student.status == StudentStatus.active
+    )
+
+    return db.execute(stmt).scalars().all()
 
 @router.get('/students/{student_id}', response_model=schemas.StudentOut)
 def get_student(student_id: int, db: Session = Depends(get_db), current_user=Depends(require_admin)):

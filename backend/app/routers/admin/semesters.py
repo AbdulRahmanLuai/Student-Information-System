@@ -4,7 +4,7 @@ from typing import List
 from datetime import date
 from ... import schemas
 from ...database import get_db
-from ...models import Semester, SemesterStatus, CourseOffering, Enrollment, Student
+from ...models import Semester, SemesterStatus, CourseOffering, Enrollment, Student, StudentStatus
 from .dependencies import require_admin
 
 router = APIRouter()
@@ -90,9 +90,8 @@ def enroll_students(db: Session, new_semester_id: int) -> None:
 
     for section_id, section_offerings in offerings_by_section.items():
         students = db.execute(
-            select(Student).where(Student.section_id == section_id)
-        ).scalars().all() # [future change]: filter active students only
-
+            select(Student).where(Student.section_id == section_id, Student.status == StudentStatus.active)
+        ).scalars().all() 
         for student in students:
             for offering in section_offerings:
                 enrollment = Enrollment(
