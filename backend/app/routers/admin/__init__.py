@@ -2,6 +2,7 @@
 TODO: Handle graduating/leaving students
 TODO: Handle changes in curriculum between years
 TODO: Fix transactionality of semester and academic year transition
+TODO: add minimum 1 section for least grade when section promotion happens
 """
 
 from fastapi import APIRouter

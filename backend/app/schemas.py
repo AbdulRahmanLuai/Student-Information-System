@@ -227,3 +227,10 @@ class EnrollmentOut(BaseModel):
 class EnrollmentCreate(BaseModel):
     student_id: int
     course_offering_id: int
+    
+    
+class SetupSectionPreview(BaseModel):
+    id: int
+    section: str
+    student_count: int
+    is_configured: bool

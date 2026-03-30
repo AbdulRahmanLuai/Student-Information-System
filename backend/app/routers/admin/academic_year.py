@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
 from datetime import datetime
 from sqlalchemy import func
-
+from app import schemas
 from app.database import get_db
 from app.models import (
     Semester, Section, Student, Course,
@@ -132,6 +132,15 @@ def ensure_last_semester_was_final_semester(semester):
 
 
 
+def get_active_setup(db: Session) -> AcademicYearSetup:
+    setup = db.exec(
+        select(AcademicYearSetup).where(AcademicYearSetup.status == "draft")
+    ).first()
+
+    if not setup:
+        raise HTTPException(404, "No active academic year setup found")
+
+    return setup
 
 
 
@@ -176,5 +185,26 @@ def reset_academic_year_setup(db: Session = Depends(get_db)):
     db.commit()
     return {"message": "Draft setup reset successfully"}
 
-    
-    
+
+@router.get("/sections", response_model=list[schemas.SetupSectionPreview])
+def get_setup_sections(db: Session = Depends(get_db)):
+
+    setup = get_active_setup(db)
+
+    sections = db.exec(
+        select(SetupSection).where(SetupSection.setup_id == setup.id)
+    ).all()
+
+    result = []
+
+    for s in sections:
+        result.append(
+            schemas.SetupSectionPreview(
+                id=s.id,
+                section=f"{s.grade}{s.name}",
+                student_count=s.student_count,
+                is_configured=s.is_configured
+            )
+        )
+
+    return result
