@@ -172,11 +172,13 @@ def advance_semester(db: Session = Depends(get_db)):
         enroll_students(db, new_semester.id)
         activate_semester(db, new_semester)
         db.commit()
+    except HTTPException:
+        db.rollback()
+        raise 
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
     
-
     return new_semester
 
 
