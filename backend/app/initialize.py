@@ -169,6 +169,85 @@ def populate_sample_data():
                     session.add(enrollment)
 
         session.commit()
+        # --- Grade 12 Courses ---
+        cs_courses_12 = [
+            Course(name="Math", code="MATH103", grade=12, department_id=cs_dept.id),
+        ]
+        sci_courses_12 = [
+            Course(name="Physics", code="PHY102", grade=12, department_id=sci_dept.id),
+        ]
+        lang_courses_12 = [
+            Course(name="English", code="ENG103", grade=12, department_id=lang_dept.id),
+        ]
+
+        all_courses_12 = cs_courses_12 + sci_courses_12 + lang_courses_12
+        session.add_all(all_courses_12)
+        session.commit()
+        for c in all_courses_12:
+            session.refresh(c)
+
+        # Update dept_courses mapping with grade 12
+        dept_courses[cs_dept.id].extend(cs_courses_12)
+        dept_courses[sci_dept.id].extend(sci_courses_12)
+        dept_courses[lang_dept.id].extend(lang_courses_12)
+
+        # --- Grade 12 Sections ---
+        for sec_name in ["A", "B"]:
+            sec = Section(grade=12, name=sec_name, academic_year_start=2025)
+            session.add(sec)
+            session.commit()
+            session.refresh(sec)
+            sections.append(sec)
+
+        # --- Grade 12 Students (3 per section) ---
+        for sec in [s for s in sections if s.grade == 12]:
+            for _ in range(3):
+                st = Student(
+                    first_name=f"Student{student_counter}",
+                    last_name="Test",
+                    email=f"student{student_counter}@school.edu",
+                    enrollment_date=date(2024, 9, 1),
+                    section_id=sec.id
+                )
+                session.add(st)
+                session.commit()
+                session.refresh(st)
+                students.append(st)
+                student_counter += 1
+
+        # --- Grade 12 Course Offerings ---
+        for teacher, dept in teacher_profiles:
+            for course in dept_courses.get(dept.id, []):
+                if course.grade != 12:
+                    continue
+                for sec in sections:
+                    if sec.grade == 12:
+                        co = CourseOffering(
+                            course_id=course.id,
+                            section_id=sec.id,
+                            semester_id=semester.id,
+                            teacher_id=teacher.id
+                        )
+                        session.add(co)
+                        session.commit()
+                        session.refresh(co)
+                        course_offerings.append(co)
+
+        # --- Grade 12 Enrollments ---
+        for st in students:
+            if st.section_id not in [s.id for s in sections if s.grade == 12]:
+                continue
+            for co in course_offerings:
+                if co.section_id == st.section_id:
+                    enrollment = Enrollment(
+                        student_id=st.id,
+                        course_offering_id=co.id,
+                        enrollment_date=date(2025, 1, 10),
+                        status="active"
+                    )
+                    session.add(enrollment)
+
+        session.commit()
         print("Sample data populated successfully!")
 
 if __name__ == "__main__":

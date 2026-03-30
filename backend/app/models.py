@@ -1,8 +1,8 @@
 from typing import Optional
 from datetime import datetime, date
 from sqlmodel import SQLModel, Field, Relationship
+from sqlalchemy import Column, Integer, ForeignKey
 from enum import Enum
-from sqlmodel import SQLModel, Field, Relationship
 from typing import Optional, List
 from enum import Enum
 
@@ -146,5 +146,37 @@ class Enrollment(SQLModel, table=True):
     # Relationships
     student: Optional[Student] = Relationship(back_populates="enrollments")
     course_offering: Optional[CourseOffering] = Relationship(back_populates="enrollments")
+    
+    
+
+# --- Draft Tables ---------------------------------------------------------------------------------------
+class AcademicYearSetup(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    
+    academic_year_start: int  # e.g. 2026
+    status: str = "draft"  # draft | completed
+    
+    created_at: datetime
+    
+class SetupSection(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+
+    setup_id: int = Field(sa_column=Column(Integer, ForeignKey("academicyearsetup.id", ondelete="CASCADE")))
+
+    name: str        # "A", "B"
+    grade: int       # promoted grade
+    
+    student_count: int
+    is_configured: bool = False
+    
+    
+class SetupCourseOffering(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+
+    setup_section_id: int = Field(sa_column=Column(Integer, ForeignKey("setupsection.id", ondelete="CASCADE")))
+
+    
+    course_id: int
+    teacher_id: Optional[int] = None
     
     
