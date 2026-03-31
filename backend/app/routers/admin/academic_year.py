@@ -1,11 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
+from sqlalchemy.orm import selectinload
 from datetime import datetime
 from sqlalchemy import func
 from app import schemas
 from app.database import get_db
 from app.models import (
-    Semester, Section, Student, Course,
+    Semester, Section, Student, Teacher, Course,
     AcademicYearSetup, SetupSection, SetupCourseOffering, SemesterStatus, CourseStatus, StudentStatus
 )
 
@@ -208,3 +209,182 @@ def get_setup_sections(db: Session = Depends(get_db)):
         )
 
     return result
+
+
+@router.get("/sections/{section_id}", response_model=schemas.SetupSectionDetail)
+def get_section_detail(section_id: int, db: Session = Depends(get_db)):
+
+    # 🔵 1. Get setup section
+    setup_section = db.get(SetupSection, section_id)
+
+    if not setup_section:
+        raise HTTPException(404, "Setup section not found")
+
+    # 🔵 2. Get all setup course offerings
+    setup_courses = db.exec(
+        select(SetupCourseOffering).where(
+            SetupCourseOffering.setup_section_id == section_id
+        )
+    ).all()
+
+    if not setup_courses:
+        raise HTTPException(400, "No courses found for this section")
+
+    # 🔵 3. Get all courses in one query
+    course_ids = [sc.course_id for sc in setup_courses]
+
+    courses = db.exec(
+        select(Course).where(Course.id.in_(course_ids))
+    ).all()
+
+    course_map = {c.id: c for c in courses}
+
+    # 🔵 4. Get all teachers (once)
+    teachers = db.exec(
+        select(Teacher).options(selectinload(Teacher.user))
+    ).all()
+    # 🔵 5. Group teachers by department
+    teachers_by_dept = {}
+    for t in teachers:
+        if t.department_id not in teachers_by_dept:
+            teachers_by_dept[t.department_id] = []
+
+        teachers_by_dept[t.department_id].append(
+            schemas.TeacherOption(
+                id=t.id,
+                name=f"{t.user.first_name} {t.user.last_name}"
+            )
+        )
+
+    # 🔵 6. Build response
+    course_items = []
+
+    for sc in setup_courses:
+        course = course_map.get(sc.course_id)
+
+        if not course:
+            raise HTTPException(
+                500,
+                f"Inconsistent data: course {sc.course_id} not found"
+            )
+
+        dept_teachers = teachers_by_dept.get(course.department_id, [])
+
+        course_items.append(
+            schemas.SetupCourseItem(
+                setup_course_id=sc.id,
+                course_id=course.id,
+                course_name=course.name,
+                teacher_id=sc.teacher_id,
+                teachers=dept_teachers
+            )
+        )
+
+    return schemas.SetupSectionDetail(
+        id=setup_section.id,
+        section=f"{setup_section.grade}{setup_section.name}",
+        courses=course_items
+    )
+    
+    
+@router.put("/sections/{section_id}")
+def update_section(
+    section_id: int,
+    payload: schemas.UpdateSectionRequest,
+    db: Session = Depends(get_db)
+):
+    try:
+        # 🔵 1. Get section
+        setup_section = db.get(SetupSection, section_id)
+        if not setup_section:
+            raise HTTPException(404, "Setup section not found")
+
+        # 🔵 2. Get all setup courses
+        setup_courses = db.exec(
+            select(SetupCourseOffering).where(
+                SetupCourseOffering.setup_section_id == section_id
+            )
+        ).all()
+
+        if not setup_courses:
+            raise HTTPException(400, "No courses found for this section")
+
+        setup_course_map = {sc.id: sc for sc in setup_courses}
+
+        # 🔵 3. Fetch related courses
+        course_ids = [sc.course_id for sc in setup_courses] 
+        courses = db.exec(
+            select(Course).where(Course.id.in_(course_ids))
+        ).all()
+        course_map = {c.id: c for c in courses}
+
+        # 🔵 4. Fetch teachers (only non-null ones)
+        teacher_ids = [
+            c.teacher_id for c in payload.courses if c.teacher_id is not None
+        ]
+
+        teachers = db.exec(
+            select(Teacher).where(Teacher.id.in_(teacher_ids))
+        ).all()
+        teacher_map = {t.id: t for t in teachers}
+
+        # 🔵 5. Apply updates
+        for item in payload.courses:
+
+            sc = setup_course_map.get(item.setup_course_id)
+            if not sc:
+                raise HTTPException(
+                    400,
+                    f"Invalid setup_course_id {item.setup_course_id}"
+                )
+
+            # ✅ Unassign case
+            if item.teacher_id is None:
+                sc.teacher_id = None
+                db.add(sc)
+                continue
+
+            course = course_map.get(sc.course_id)
+            if not course:
+                raise HTTPException(
+                    500,
+                    f"Inconsistent data: course {sc.course_id} not found"
+                )
+
+            teacher = teacher_map.get(item.teacher_id)
+            if not teacher:
+                raise HTTPException(
+                    400,
+                    f"Teacher {item.teacher_id} not found"
+                )
+
+            if teacher.department_id != course.department_id:
+                raise HTTPException(
+                    400,
+                    "Teacher does not belong to course department"
+                )
+
+            sc.teacher_id = teacher.id
+            db.add(sc)
+
+        # 🔵 6. Recompute is_configured
+        all_configured = all(
+            sc.teacher_id is not None for sc in setup_courses
+        )
+
+        setup_section.is_configured = all_configured
+        db.add(setup_section)
+
+        db.commit()
+
+        return {
+            "message": "Section updated successfully",
+            "is_configured": setup_section.is_configured
+        }
+
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception:
+        db.rollback()
+        raise HTTPException(500, "Internal server error")

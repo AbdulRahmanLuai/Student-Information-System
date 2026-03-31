@@ -234,3 +234,34 @@ class SetupSectionPreview(BaseModel):
     section: str
     student_count: int
     is_configured: bool
+    
+    
+from pydantic import BaseModel
+
+class TeacherOption(BaseModel):
+    id: int
+    name: str
+
+
+class SetupCourseItem(BaseModel):
+    setup_course_id: int
+    course_id: int
+    course_name: str
+    teacher_id: int | None
+    teachers: list[TeacherOption]
+
+
+class SetupSectionDetail(BaseModel):
+    id: int
+    section: str
+    courses: list[SetupCourseItem]
+    
+from pydantic import BaseModel
+
+class CourseAssignment(BaseModel):
+    setup_course_id: int
+    teacher_id: int | None
+
+
+class UpdateSectionRequest(BaseModel):
+    courses: list[CourseAssignment]
