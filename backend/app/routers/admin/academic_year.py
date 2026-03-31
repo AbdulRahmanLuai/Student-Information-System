@@ -10,7 +10,7 @@ from app.models import (
     AcademicYearSetup, SetupSection, SetupCourseOffering, SemesterStatus, CourseStatus, StudentStatus
 )
 
-router = APIRouter(prefix="/academic-year", tags=["Academic Year"])
+router = APIRouter(prefix="/academic-year")
 
 
 MAX_SEMESTERS_PER_YEAR = 3

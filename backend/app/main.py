@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
 from app.initialize import create_db_and_tables, populate_sample_data
-from .routers import auth, course_offerings, admin
+from .routers import auth, admin, teacher
 from fastapi.middleware.cors import CORSMiddleware
 
 
@@ -25,7 +25,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-app.include_router(course_offerings.router)
+app.include_router(teacher.router)
 app.include_router(auth.router)
 app.include_router(admin.router)
 
