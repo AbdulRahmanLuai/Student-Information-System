@@ -5,10 +5,10 @@ TODO: Fix transactionality of semester and academic year transition
 TODO: add minimum 1 section for least grade when section promotion happens
 """
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from . import users, teachers, departments, courses, sections, students, semesters, course_offerings, enrollments, academic_year
-
-router = APIRouter(prefix='/admin', tags=["admin"])
+from .dependencies import require_admin
+router = APIRouter(prefix='/admin', tags=["admin"], dependencies=[Depends(require_admin)])
 
 router.include_router(users.router)
 router.include_router(teachers.router)
