@@ -3,10 +3,11 @@ import asyncio
 from sqlalchemy import create_engine, text
 from app.config import settings
 
+
 # --- CONFIGURATION ---
 DATABASE_URL = settings.DATABASE_URL
 BASE_URL = "http://localhost:8000"
-ADMIN_TOKEN = "PASTE_YOUR_TOKEN_HERE"
+ADMIN_TOKEN = settings.ADMIN_TOKEN
 
 async def run_full_automation():
     headers = {"Authorization": f"Bearer {ADMIN_TOKEN}"}

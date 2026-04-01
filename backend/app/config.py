@@ -14,6 +14,8 @@ class Settings(BaseSettings):
     ALGORITHM: str
     EXPIRATION_TIME: int
     
+    ADMIN_TOKEN: str
+    
     model_config = SettingsConfigDict(env_file=".env")
 
     @computed_field
