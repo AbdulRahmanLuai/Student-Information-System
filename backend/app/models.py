@@ -100,6 +100,7 @@ class Semester(SQLModel, table=True):
 class StudentStatus(str, Enum):
     active = "active"
     inactive = "inactive"
+    graduated = "graduated"
 
 class Student(SQLModel, table=True):
     __tablename__ = "students"
@@ -109,7 +110,7 @@ class Student(SQLModel, table=True):
     last_name: str
     email: str
     enrollment_date: Optional[date] = None
-    section_id: int = Field(foreign_key="sections.id")
+    section_id: Optional[int] = Field(default=None, foreign_key="sections.id")
     status: StudentStatus = Field(default=StudentStatus.active)
     
     # Relationships

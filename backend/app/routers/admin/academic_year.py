@@ -5,15 +5,17 @@ from datetime import datetime
 from sqlalchemy import func
 from app import schemas
 from app.database import get_db
+from collections import defaultdict
 from app.models import (
     Semester, Section, Student, Teacher, Course,
-    AcademicYearSetup, SetupSection, SetupCourseOffering, SemesterStatus, CourseStatus, StudentStatus
+    AcademicYearSetup, SetupSection, SetupCourseOffering, SemesterStatus, CourseStatus, StudentStatus, CourseOffering
 )
 
 router = APIRouter(prefix="/academic-year")
 
 
 MAX_SEMESTERS_PER_YEAR = 3
+FINAL_GRADE = 12
 
 # --- Helper Functions ---------------------------------------------------------------------------------
 
@@ -63,7 +65,7 @@ def generate_setup_sections(
         raise HTTPException(400, "No sections found for current academic year")
     for section in current_sections:
         
-        if section.grade == 12:
+        if section.grade == FINAL_GRADE:
             continue
             
 
@@ -145,6 +147,139 @@ def get_active_setup(db: Session) -> AcademicYearSetup:
 
 
 
+def validate_commit_preconditions(db: Session) -> tuple[AcademicYearSetup, list[SetupSection]]:
+    setup = db.exec(
+        select(AcademicYearSetup).where(AcademicYearSetup.status == "draft")
+    ).first()
+
+    if not setup:
+        raise HTTPException(400, "No active academic year setup found")
+
+    setup_sections = db.exec(
+        select(SetupSection).where(SetupSection.setup_id == setup.id)
+    ).all()
+
+    if not setup_sections:
+        raise HTTPException(400, "No setup sections found")
+
+    if not all(s.is_configured for s in setup_sections):
+        raise HTTPException(400, "All sections must be configured before commit")
+
+    current_semester = db.exec(
+        select(Semester).where(Semester.status == SemesterStatus.current)
+    ).first()
+
+    if current_semester:
+        raise HTTPException(400, "Cannot commit while a semester is active")
+
+    return setup, setup_sections
+
+
+def create_new_semester(db: Session, setup: AcademicYearSetup) -> Semester:
+    semester = Semester(
+        academic_year_start=setup.academic_year_start,
+        academic_year_end=setup.academic_year_start + 1,
+        number=1,
+        status=SemesterStatus.current
+    )
+    db.add(semester)
+    db.flush()
+    print(semester, "this was created")
+    return semester
+
+
+def create_sections(db: Session, setup: AcademicYearSetup, setup_sections: list[SetupSection]):
+    new_section_map = {}
+
+    for s in setup_sections:
+        new_section = Section(
+            grade=s.grade,
+            name=s.name,
+            academic_year_start=setup.academic_year_start
+        )
+        db.add(new_section)
+        db.flush()
+
+        key = (s.grade, s.name)
+        if key in new_section_map:
+            raise HTTPException(400, f"Duplicate section {key}")
+
+        new_section_map[key] = new_section
+
+    return new_section_map
+
+def promote_students(db: Session, setup: AcademicYearSetup, new_section_map):
+    previous_year = setup.academic_year_start - 1
+
+    old_sections = db.exec(
+        select(Section).where(Section.academic_year_start == previous_year)
+    ).all()
+
+    old_section_map = {(s.grade, s.name): s for s in old_sections}
+
+    students = db.exec(
+        select(Student).where(Student.status == StudentStatus.active)
+    ).all()
+
+    section_students_map = defaultdict(list)
+    for student in students:
+        section_students_map[student.section_id].append(student)
+
+    for (grade, name), old_section in old_section_map.items():
+        
+        if grade == FINAL_GRADE:
+            
+            # graduate students instead of promoting them
+            for student in section_students_map.get(old_section.id, []):
+                student.section_id = None
+                student.status = StudentStatus.graduated
+                db.add(student)
+            continue
+
+        new_key = (grade + 1, name)
+        new_section = new_section_map.get(new_key)
+
+        if not new_section:
+            raise HTTPException(
+                500,
+                f"Missing new section for {(grade+1, name)}"
+            )
+
+        for student in section_students_map.get(old_section.id, []):
+            student.section_id = new_section.id
+            db.add(student)
+            
+            
+def create_course_offerings(db: Session, setup: AcademicYearSetup, setup_sections, new_section_map, semester: Semester):
+    setup_courses = db.exec(
+        select(SetupCourseOffering)
+        .join(SetupSection, SetupCourseOffering.setup_section_id == SetupSection.id)
+        .where(SetupSection.setup_id == setup.id)
+    ).all()
+
+    setup_section_map = {s.id: s for s in setup_sections}
+
+    for sc in setup_courses:
+        setup_section = setup_section_map.get(sc.setup_section_id)
+
+        if not setup_section:
+            raise HTTPException(500, "Invalid setup data")
+
+        new_section = new_section_map.get(
+            (setup_section.grade, setup_section.name)
+        )
+
+        if not new_section:
+            raise HTTPException(500, "Section mapping failed")
+
+        db.add(CourseOffering(
+            course_id=sc.course_id,
+            section_id=new_section.id,
+            semester_id=semester.id,
+            teacher_id=sc.teacher_id
+        ))
+
+
 
 # --- Endpoints -----------------------------------------------------------------------------------------
 
@@ -166,8 +301,9 @@ def start_academic_year_migration(db: Session = Depends(get_db)):
     except HTTPException:
         db.rollback()
         raise
-    except Exception:
+    except Exception as e:
         db.rollback()
+        print(e, "check")
         raise HTTPException(500, "Internal server error")
             
     return {"academicyearsetup_id": setup.id}
@@ -385,6 +521,38 @@ def update_section(
     except HTTPException:
         db.rollback()
         raise
-    except Exception:
+    except Exception as e:
+        print(e, "check2")
+        db.rollback()
+        raise HTTPException(500, "Internal server error")
+    
+    
+
+
+@router.post("/commit")
+def commit_academic_year(db: Session = Depends(get_db)):
+    try:
+        setup, setup_sections = validate_commit_preconditions(db)
+
+        semester = create_new_semester(db, setup)
+
+        new_section_map = create_sections(db, setup, setup_sections) 
+
+        promote_students(db, setup, new_section_map) # edit so grade 12 students are not promoted
+
+        create_course_offerings(db, setup, setup_sections, new_section_map, semester)
+
+        setup.status = "completed"
+        db.add(setup)
+
+        db.commit()
+
+        return {"message": "Academic year committed successfully"}
+
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as e:
+        print (e, "check 3")
         db.rollback()
         raise HTTPException(500, "Internal server error")
