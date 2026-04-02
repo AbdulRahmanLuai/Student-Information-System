@@ -1,10 +1,3 @@
-"""
-TODO: Handle graduating/leaving students
-TODO: Handle changes in curriculum between years
-TODO: Fix transactionality of semester and academic year transition
-TODO: add minimum 1 section for least grade when section promotion happens
-"""
-
 from fastapi import APIRouter, Depends
 from . import users, teachers, departments, courses, sections, students, semesters, course_offerings, enrollments, academic_year
 from .dependencies import require_admin
