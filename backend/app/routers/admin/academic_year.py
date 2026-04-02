@@ -1,15 +1,18 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import Session, select
 from sqlalchemy.orm import selectinload
 from datetime import datetime
 from sqlalchemy import func
+from sqlalchemy.exc import IntegrityError
 from app import schemas
 from app.database import get_db
 from collections import defaultdict
 from app.models import (
     Semester, Section, Student, Teacher, Course,
-    AcademicYearSetup, SetupSection, SetupCourseOffering, SemesterStatus, CourseStatus, StudentStatus, CourseOffering
+    AcademicYearSetup, SetupSection, SetupCourseOffering, SemesterStatus, CourseStatus, StudentStatus, CourseOffering, Enrollment
 )
+import logging
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/academic-year")
 
@@ -278,6 +281,41 @@ def create_course_offerings(db: Session, setup: AcademicYearSetup, setup_section
             semester_id=semester.id,
             teacher_id=sc.teacher_id
         ))
+        
+        
+def check_valid_enrollment_state(db: Session) -> bool:
+    # 1. No active (draft) setup
+    active_setup = db.exec(
+        select(AcademicYearSetup).where(AcademicYearSetup.status == "draft")
+    ).first()
+
+    if active_setup:
+        return False
+
+    # 2. Current semester must exist
+    current_semester = db.exec(
+        select(Semester).where(Semester.status == SemesterStatus.current)
+    ).first()
+
+    if not current_semester:
+        return False
+
+    # 3. Must be first semester of academic year
+    if current_semester.number != 1:
+        return False
+
+    # 4. A completed setup must exist for this academic year
+    completed_setup = db.exec(
+        select(AcademicYearSetup).where(
+            AcademicYearSetup.status == "completed",
+            AcademicYearSetup.academic_year_start == current_semester.academic_year_start
+        )
+    ).first()
+
+    if not completed_setup:
+        return False, None
+
+    return True, current_semester
 
 
 
@@ -555,4 +593,71 @@ def commit_academic_year(db: Session = Depends(get_db)):
     except Exception as e:
         print (e, "check 3")
         db.rollback()
+        raise HTTPException(500, "Internal server error")
+    
+    
+
+    
+    
+@router.post("/enroll-all")
+def enroll(db: Session = Depends(get_db)):
+    try:
+        valid_state, current_semester = check_valid_enrollment_state(db)
+        if not valid_state:
+            raise HTTPException(400, "Finish migration before enrolling")
+
+        course_offerings = db.exec(
+            select(CourseOffering).where(
+                CourseOffering.semester_id == current_semester.id
+            )
+        ).all()
+        
+        if not course_offerings:
+            raise HTTPException(400, "No course offerings found for current semester")
+        
+        course_offering_ids = {co.id for co in course_offerings}
+        existing = db.exec(
+            select(Enrollment).where(
+                Enrollment.course_offering_id.in_(course_offering_ids)
+            )
+        ).first()  
+
+        if existing:
+            raise HTTPException(400, "Enrollments already exist for this semester, for Bulk Enrollments no enrollments should exist")
+
+        students = db.exec(
+            select(Student).where(
+                Student.status == StudentStatus.active
+            )
+        ).all()
+
+        students_by_section = defaultdict(list)
+        for student in students:
+            students_by_section[student.section_id].append(student)
+
+        for co in course_offerings:
+            for student in students_by_section.get(co.section_id, []):
+
+                enrollment = Enrollment(
+                    student_id=student.id,
+                    course_offering_id=co.id,
+                    status="active"
+                )
+                db.add(enrollment)
+
+        db.commit()
+
+        return {"message": "Enrollments created successfully"}
+
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(400, "Duplicate enrollments detected")
+
+    except HTTPException:
+        db.rollback()
+        raise
+
+    except Exception:
+        db.rollback()
+        logger.exception("Unexpected error during enroll-all")
         raise HTTPException(500, "Internal server error")

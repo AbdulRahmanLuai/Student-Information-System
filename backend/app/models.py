@@ -1,6 +1,6 @@
 from typing import Optional
 from datetime import datetime, date
-from sqlmodel import SQLModel, Field, Relationship
+from sqlmodel import SQLModel, Field, Relationship, UniqueConstraint
 from sqlalchemy import Column, Integer, ForeignKey
 from enum import Enum
 from typing import Optional, List
@@ -137,6 +137,9 @@ class CourseOffering(SQLModel, table=True):
 
 class Enrollment(SQLModel, table=True):
     __tablename__ = "enrollments"
+    __table_args__ = (
+        UniqueConstraint("student_id", "course_offering_id", name="uq_student_course"),
+    )
     
     id: Optional[int] = Field(default=None, primary_key=True)
     student_id: Optional[int] = Field(default=None, foreign_key="students.id")
