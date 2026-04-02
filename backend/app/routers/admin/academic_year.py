@@ -19,6 +19,7 @@ router = APIRouter(prefix="/academic-year")
 
 MAX_SEMESTERS_PER_YEAR = 3
 FINAL_GRADE = 12
+MIN_GRADE=10
 
 # --- Helper Functions ---------------------------------------------------------------------------------
 
@@ -93,6 +94,20 @@ def generate_setup_sections(
         db.flush()
 
         create_section_course_templates(db, setup_section)
+        
+    setup_section = SetupSection(
+            setup_id=setup.id,
+            name="A",
+            grade=MIN_GRADE,
+            student_count=0,
+            is_configured=False
+        )
+    db.add(setup_section)
+    db.flush()
+
+    create_section_course_templates(db, setup_section)
+    
+    
         
 
 def create_section_course_templates(
