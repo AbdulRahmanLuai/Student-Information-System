@@ -1,15 +1,15 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import jwt_decode from "jwt-decode";
+import { Role } from "../types";
 
 interface TokenPayload {
   user_id: string;
-  role: string;
+  role: Role;
   exp?: number;
 }
 
 interface AuthContextType {
-  token: string;
-  role: string | null;
+  role: Role | null;
   login: (token: string) => void;
   logout: () => void;
   isAuthenticated: boolean;
@@ -20,7 +20,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [token, setToken] = useState(localStorage.getItem("token") || "");
-  const [role, setRole] = useState<string | null>(null);
+  const [role, setRole] = useState<Role | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -34,7 +34,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } else {
       setRole(null);
     }
-
     setIsLoading(false);
   }, [token]);
 
@@ -49,12 +48,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setRole(null);
   };
 
-  const isAuthenticated = !!token && role === "teacher";
+  const isAuthenticated = !!token && !!role;
 
   return (
-    <AuthContext.Provider
-      value={{ token, role, login, logout, isAuthenticated, isLoading }}
-    >
+    <AuthContext.Provider value={{ role, login, logout, isAuthenticated, isLoading }}>
       {children}
     </AuthContext.Provider>
   );

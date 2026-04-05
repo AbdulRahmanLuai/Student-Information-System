@@ -265,3 +265,6 @@ class CourseAssignment(BaseModel):
 
 class UpdateSectionRequest(BaseModel):
     courses: list[CourseAssignment]
+    
+class EnrollmentStatusOut(BaseModel):
+    should_enroll: bool

@@ -1,37 +1,64 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import Login from "./pages/Login";
-import TeacherDashboard from "./pages/TeacherDashboard";
-import CourseOfferingDetails from "./pages/CourseOfferingDetails";
+import { AuthProvider, useAuth } from "./hooks/useAuth"; // Combined imports
 import { ProtectedRoute } from "./components/ProtectedRoute";
+
+// Pages
+import Login from "./pages/Login";
+import TeacherDashboard from "./pages/teacher/TeacherDashboard";
+import CourseOfferingDetails from "./pages/teacher/CourseOfferingDetails";
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import AcademicYearSections from "./pages/admin/AcademicYearSections";
+import AcademicYearSectionDetail from "./pages/admin/AcademicYearSectionDetail";
+import SectionStudents from "./pages/admin/SectionStudents"; // Removed .tsx
+import SectionCourseOfferings from "./pages/admin/SectionCourseOfferings"; // Removed .tsx
+
+const RootRedirect = () => {
+  const { isAuthenticated, role, isLoading } = useAuth();
+  if (isLoading) return <div className="p-4">Loading...</div>;
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  return <Navigate to={`/${role}/dashboard`} replace />;
+};
 
 function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/login" element={<Login />} />
+    <AuthProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/login" element={<Login />} />
 
-        <Route
-          path="/dashboard"
-          element={
-            <ProtectedRoute>
-              <TeacherDashboard />
-            </ProtectedRoute>
-          }
-        />
+          {/* Teacher routes */}
+          <Route path="/teacher/dashboard" element={
+            <ProtectedRoute allowedRole="teacher"><TeacherDashboard /></ProtectedRoute>
+          }/>
+          <Route path="/teacher/course-offerings/:id" element={
+            <ProtectedRoute allowedRole="teacher"><CourseOfferingDetails /></ProtectedRoute>
+          }/>
 
-        <Route
-          path="/course-offerings/:id"
-          element={
-            <ProtectedRoute>
-              <CourseOfferingDetails />
-            </ProtectedRoute>
-          }
-        />
+          {/* Admin routes */}
+          <Route path="/admin/dashboard" element={
+            <ProtectedRoute allowedRole="admin"><AdminDashboard /></ProtectedRoute>
+          }/>
+          <Route path="/admin/academic-year/sections" element={
+            <ProtectedRoute allowedRole="admin"><AcademicYearSections /></ProtectedRoute>
+          }/>
+          <Route path="/admin/academic-year/sections/:sectionId" element={
+            <ProtectedRoute allowedRole="admin"><AcademicYearSectionDetail /></ProtectedRoute>
+          }/>
+          
+          {/* Combined Section Student/Course Routes */}
+          <Route path="/admin/sections/:sectionId/students" element={
+            <ProtectedRoute allowedRole="admin"><SectionStudents /></ProtectedRoute>
+          }/>
+          <Route path="/admin/sections/:sectionId/course-offerings" element={
+            <ProtectedRoute allowedRole="admin"><SectionCourseOfferings /></ProtectedRoute>
+          }/>
 
-        {/* default redirect */}
-        <Route path="*" element={<Navigate to="/dashboard" />} />
-      </Routes>
-    </BrowserRouter>
+          {/* Redirects */}
+          <Route path="/" element={<RootRedirect />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </BrowserRouter>
+    </AuthProvider>
   );
 }
 

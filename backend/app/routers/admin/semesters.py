@@ -135,6 +135,19 @@ def end_semester(db: Session = Depends(get_db)):
         )
     ).scalars().first()
 
+    completed_enrollment = db.execute(
+        select(Enrollment)
+        .join(CourseOffering, Enrollment.course_offering_id == CourseOffering.id)
+        .where(
+            CourseOffering.semester_id == semester.id,
+            Enrollment.status == "completed"
+        )
+    ).scalars().first()
+    
+    if not completed_enrollment:
+        raise HTTPException(status_code=400, detail="Cannot end semester with no completed enrollments")
+
+
     if active_enrollment:
         raise HTTPException(status_code=400, detail="Cannot end semester with active enrollments")
 
@@ -180,5 +193,7 @@ def advance_semester(db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail=str(e))
     
     return new_semester
+
+
 
 

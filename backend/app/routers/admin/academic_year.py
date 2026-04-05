@@ -34,17 +34,6 @@ def get_last_semester(db: Session) -> Semester:
 
     return semester
 
-
-def ensure_no_active_setup(db: Session):
-    existing = db.exec(
-        select(AcademicYearSetup).where(AcademicYearSetup.status == "draft")
-    ).first()
-
-    if existing:
-        raise HTTPException(
-            status_code=400,
-            detail="An academic year setup is already in progress"
-        )
         
 def create_academic_year_setup(db: Session, new_year: int) -> AcademicYearSetup:
     setup = AcademicYearSetup(
@@ -157,9 +146,6 @@ def get_active_setup(db: Session) -> AcademicYearSetup:
     setup = db.exec(
         select(AcademicYearSetup).where(AcademicYearSetup.status == "draft")
     ).first()
-
-    if not setup:
-        raise HTTPException(404, "No active academic year setup found")
 
     return setup
 
@@ -298,36 +284,49 @@ def create_course_offerings(db: Session, setup: AcademicYearSetup, setup_section
         ))
         
         
-def check_valid_enrollment_state(db: Session) -> bool:
-    # 1. No active (draft) setup
+def check_valid_enrollment_state(db: Session):
     active_setup = db.exec(
         select(AcademicYearSetup).where(AcademicYearSetup.status == "draft")
     ).first()
-
     if active_setup:
-        return False
+        print(f"active setup: {active_setup}")
+        return False, None
 
-    # 2. Current semester must exist
     current_semester = db.exec(
         select(Semester).where(Semester.status == SemesterStatus.current)
     ).first()
-
     if not current_semester:
-        return False
+        print(f"this1")
+        return False, None
 
-    # 3. Must be first semester of academic year
     if current_semester.number != 1:
-        return False
+        print("this2")
+        return False, None
 
-    # 4. A completed setup must exist for this academic year
     completed_setup = db.exec(
         select(AcademicYearSetup).where(
             AcademicYearSetup.status == "completed",
             AcademicYearSetup.academic_year_start == current_semester.academic_year_start
         )
     ).first()
-
     if not completed_setup:
+        print("this3")
+        return False, None
+
+    # 5. No enrollments should exist yet for this semester
+    course_offerings = db.exec(
+        select(CourseOffering).where(
+            CourseOffering.semester_id == current_semester.id
+        )
+    ).all()
+    course_offering_ids = {co.id for co in course_offerings}
+    existing_enrollment = db.exec(
+        select(Enrollment).where(
+            Enrollment.course_offering_id.in_(course_offering_ids)
+        )
+    ).first()
+    if existing_enrollment:
+        print("this4")
         return False, None
 
     return True, current_semester
@@ -338,19 +337,25 @@ def check_valid_enrollment_state(db: Session) -> bool:
 
 @router.post("/start")
 def start_academic_year_migration(db: Session = Depends(get_db)):
-    
+    # 1. Check if a draft already exists
+    existing_setup = get_active_setup(db)
+    if existing_setup:
+        return {"academicyearsetup_id": existing_setup.id}
+
+    # 2. Proceed with standard validation if no draft exists
     ensure_no_current_semester(db)
-    ensure_no_active_setup(db)
+    
     last_semester = get_last_semester(db)
     ensure_last_semester_was_final_semester(last_semester)
     
     new_year = last_semester.academic_year_start + 1
-    
 
     try:        
         setup = create_academic_year_setup(db, new_year)
         generate_setup_sections(db, setup, last_semester.academic_year_start)
         db.commit()
+        # Refresh to get the generated ID after commit
+        db.refresh(setup) 
     except HTTPException:
         db.rollback()
         raise
@@ -360,7 +365,6 @@ def start_academic_year_migration(db: Session = Depends(get_db)):
         raise HTTPException(500, "Internal server error")
             
     return {"academicyearsetup_id": setup.id}
-
 
 @router.delete("/reset")
 def reset_academic_year_setup(db: Session = Depends(get_db)):
@@ -380,6 +384,9 @@ def reset_academic_year_setup(db: Session = Depends(get_db)):
 def get_setup_sections(db: Session = Depends(get_db)):
 
     setup = get_active_setup(db)
+    if not setup:
+        raise HTTPException(404, "No active academic year setup found")
+        
 
     sections = db.exec(
         select(SetupSection).where(SetupSection.setup_id == setup.id)
@@ -396,7 +403,7 @@ def get_setup_sections(db: Session = Depends(get_db)):
                 is_configured=s.is_configured
             )
         )
-
+    print(result)
     return result
 
 
@@ -618,6 +625,7 @@ def commit_academic_year(db: Session = Depends(get_db)):
 def enroll(db: Session = Depends(get_db)):
     try:
         valid_state, current_semester = check_valid_enrollment_state(db)
+        print(valid_state, current_semester)
         if not valid_state:
             raise HTTPException(400, "Finish migration before enrolling")
 
@@ -676,3 +684,15 @@ def enroll(db: Session = Depends(get_db)):
         db.rollback()
         logger.exception("Unexpected error during enroll-all")
         raise HTTPException(500, "Internal server error")
+    
+@router.get("/enrollment-status", response_model=schemas.EnrollmentStatusOut)
+def get_enrollment_status(db: Session = Depends(get_db)):
+    result = check_valid_enrollment_state(db)
+    valid, current_semester = result
+    print(valid)
+
+    # check_valid_enrollment_state returns (False) or (True, semester)
+    if not valid:
+        return schemas.EnrollmentStatusOut(should_enroll=False)
+    
+    return schemas.EnrollmentStatusOut(should_enroll=valid)

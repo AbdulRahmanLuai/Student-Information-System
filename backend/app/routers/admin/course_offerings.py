@@ -86,7 +86,7 @@ def create_course_offering(data: schemas.CourseOfferingCreate, db: Session = Dep
 
 
 @router.get('/course-offerings', response_model=List[schemas.CourseOfferingOut])
-def get_course_offerings(semester_id: Optional[int] = None, teacher_id: Optional[int] = None, db: Session = Depends(get_db),
+def get_course_offerings(semester_id: Optional[int] = None, teacher_id: Optional[int] = None, section_id: Optional[int] = None, db: Session = Depends(get_db),
                          current_user=Depends(require_admin)):
 
     # default to current semester if no semester_id provided
@@ -111,6 +111,11 @@ def get_course_offerings(semester_id: Optional[int] = None, teacher_id: Optional
         if not teacher:
             raise HTTPException(status_code=404, detail=f"teacher with id {teacher_id} not found")
         stmt = stmt.where(CourseOffering.teacher_id == teacher_id)
+    if section_id:
+        section = db.execute(select(Section).where(Section.id == section_id))
+        if not section:
+            raise HTTPException(status_code=404, detail=f"section with id {section_id} not found")
+        stmt = stmt.where(CourseOffering.section_id == section_id)
     results = db.execute(stmt).scalars().all()
 
     return results
