@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import AdminLayout from "../../components/AdminLayout";
 import client from "../../api/client";
 import { Student } from "../../types";
+import { getSectionById } from "../../api/sections";
 
 const SectionStudents = () => {
   const { sectionId } = useParams();
@@ -10,22 +11,31 @@ const SectionStudents = () => {
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [sectionName, setSectionName] = useState("");
 
   useEffect(() => {
-    const fetch = async () => {
+    const fetchData = async () => {
       try {
-        const response = await client.get("/admin/students", {
-          params: { section_id: Number(sectionId) },
-        });
-        setStudents(response.data);
+        const id = Number(sectionId);
+
+        // fetch in parallel (cleaner + faster)
+        const [studentsRes, section] = await Promise.all([
+          client.get("/admin/students", {
+            params: { section_id: id },
+          }),
+          getSectionById(id),
+        ]);
+
+        setStudents(studentsRes.data);
+        setSectionName(`Grade ${section.grade} - ${section.name}`);
       } catch (err: any) {
-        setError(err.response?.data?.detail || "Failed to fetch students");
+        setError(err.response?.data?.detail || "Failed to fetch data");
       } finally {
         setLoading(false);
       }
     };
 
-    fetch();
+    if (sectionId) fetchData();
   }, [sectionId]);
 
   return (
@@ -37,13 +47,17 @@ const SectionStudents = () => {
         ← Back to Dashboard
       </button>
 
-      <h1 className="text-2xl font-bold mb-6">Students</h1>
+      <h1 className="text-2xl font-bold mb-6">
+        Students {sectionName && `— ${sectionName}`}
+      </h1>
 
       {loading && <p>Loading...</p>}
       {error && <p className="text-red-500">{error}</p>}
 
       {!loading && students.length === 0 && (
-        <p className="text-gray-500">No students found for this section.</p>
+        <p className="text-gray-500">
+          No students found for this section.
+        </p>
       )}
 
       <div className="overflow-x-auto">
@@ -69,13 +83,15 @@ const SectionStudents = () => {
                   {s.enrollment_date ?? "—"}
                 </td>
                 <td className="px-4 py-2 border-b">
-                  <span className={`text-sm px-2 py-1 rounded-full font-medium ${
-                    s.status === "active"
-                      ? "bg-green-100 text-green-700"
-                      : s.status === "graduated"
-                      ? "bg-blue-100 text-blue-700"
-                      : "bg-gray-100 text-gray-500"
-                  }`}>
+                  <span
+                    className={`text-sm px-2 py-1 rounded-full font-medium ${
+                      s.status === "active"
+                        ? "bg-green-100 text-green-700"
+                        : s.status === "graduated"
+                        ? "bg-blue-100 text-blue-700"
+                        : "bg-gray-100 text-gray-500"
+                    }`}
+                  >
                     {s.status}
                   </span>
                 </td>

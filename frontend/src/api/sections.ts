@@ -22,3 +22,8 @@ export const createSection = async (payload: {
 export const deleteSection = async (sectionId: number): Promise<void> => {
   await client.delete(`/admin/sections/${sectionId}`);
 };
+
+export const getSectionById = async (sectionId: number): Promise<Section> => {
+  const response = await client.get(`/admin/sections/${sectionId}`);
+  return response.data;
+};

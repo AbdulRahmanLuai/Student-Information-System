@@ -11,6 +11,7 @@ const SectionCourseOfferings = () => {
   const [courseOfferings, setCourseOfferings] = useState<CourseOffering[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [sectionName, setSectionName] = useState("");
 
   // Edit modal state
   const [editingOffering, setEditingOffering] = useState<CourseOffering | null>(null);
@@ -24,9 +25,15 @@ const SectionCourseOfferings = () => {
     const fetch = async () => {
       try {
         const data = await getAdminCourseOfferings({
-          section_id: Number(sectionId),
-        });
-        setCourseOfferings(data);
+        section_id: Number(sectionId),
+      });
+      setCourseOfferings(data);
+
+      // extract section name from first item
+      if (data.length > 0) {
+        const s = data[0].section;
+        setSectionName(`Grade ${s.grade} - ${s.name}`);
+}
       } catch (err: any) {
         setError(err.response?.data?.detail || "Failed to fetch course offerings");
       } finally {
@@ -83,8 +90,9 @@ const SectionCourseOfferings = () => {
         ← Back to Dashboard
       </button>
 
-      <h1 className="text-2xl font-bold mb-6">Course Offerings</h1>
-
+    <h1 className="text-2xl font-bold mb-6">
+      Course Offerings {sectionName && `— ${sectionName}`}
+    </h1>
       {loading && <p>Loading...</p>}
       {error && <p className="text-red-500">{error}</p>}
 
