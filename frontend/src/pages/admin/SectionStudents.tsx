@@ -4,6 +4,9 @@ import AdminLayout from "../../components/AdminLayout";
 import client from "../../api/client";
 import { Student } from "../../types";
 import { getSectionById } from "../../api/sections";
+import { changeStudentSection } from "../../api/students";
+import { getSections } from "../../api/sections";
+import { Section } from "../../types";
 
 const SectionStudents = () => {
   const { sectionId } = useParams();
@@ -12,6 +15,20 @@ const SectionStudents = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [sectionName, setSectionName] = useState("");
+  const [sections, setSections] = useState<Section[]>([]);
+  const handleSectionChange = async (studentId: number, newSectionId: number) => {
+    try {
+      await changeStudentSection(studentId, newSectionId);
+
+      // refresh students
+      const response = await client.get("/admin/students", {
+        params: { section_id: Number(sectionId) },
+      });
+      setStudents(response.data);
+    } catch (err: any) {
+      alert(err.response?.data?.detail || "Failed to change section");
+    }
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -33,6 +50,14 @@ const SectionStudents = () => {
       } finally {
         setLoading(false);
       }
+      if (sectionId) {
+      const section = await getSectionById(Number(sectionId));
+      setSectionName(`Grade ${section.grade} - ${section.name}`);
+
+      const allSections = await getSections(section.academic_year_start);
+      const sameGrade = allSections.filter(s => s.grade === section.grade);
+      setSections(sameGrade);
+}
     };
 
     if (sectionId) fetchData();
@@ -68,6 +93,8 @@ const SectionStudents = () => {
               <th className="px-4 py-2 border-b">Email</th>
               <th className="px-4 py-2 border-b">Enrollment Date</th>
               <th className="px-4 py-2 border-b">Status</th>
+              <th className="px-4 py-2 border-b">Move</th>
+
             </tr>
           </thead>
           <tbody>
@@ -95,6 +122,24 @@ const SectionStudents = () => {
                     {s.status}
                   </span>
                 </td>
+                <td className="px-4 py-2 border-b">
+                <select
+                  onChange={(e) =>
+                    handleSectionChange(s.id, Number(e.target.value))
+                  }
+                  defaultValue=""
+                  className="border px-2 py-1 rounded"
+                >
+                  <option value="">Move to...</option>
+                  {sections
+                    .filter(sec => sec.id !== s.section_id)
+                    .map(sec => (
+                      <option key={sec.id} value={sec.id}>
+                        {sec.name}
+                      </option>
+                    ))}
+                </select>
+              </td>
               </tr>
             ))}
           </tbody>

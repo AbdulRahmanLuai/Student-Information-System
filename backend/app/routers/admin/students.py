@@ -92,3 +92,76 @@ def get_student(student_id: int, db: Session = Depends(get_db), current_user=Dep
         raise HTTPException(status_code=404, detail=f"student with id {student_id} not found")
 
     return student
+
+from ...models import Enrollment, CourseOffering
+
+@router.patch('/students/{student_id}/section', response_model=schemas.StudentOut)
+def change_student_section(
+    student_id: int,
+    data: schemas.StudentUpdateSection,
+    db: Session = Depends(get_db),
+    current_user=Depends(require_admin)
+):
+    # 1. Get student
+    student = db.get(Student, student_id)
+    if not student:
+        raise HTTPException(status_code=404, detail="Student not found")
+
+    # 2. Get current semester
+    current_semester = db.exec(
+        select(Semester).where(Semester.status == SemesterStatus.current)
+    ).first()
+    if not current_semester:
+        raise HTTPException(status_code=400, detail="No current semester")
+
+    # 3. Get new section
+    new_section = db.get(Section, data.section_id)
+    if not new_section:
+        raise HTTPException(status_code=404, detail="Section not found")
+    if new_section.grade != student.section.grade:
+        raise HTTPException(status_code=400, detail="Cannot move student to a section of a different grade")
+
+    if new_section.academic_year_start != current_semester.academic_year_start:
+        raise HTTPException(status_code=400, detail="Section not in current academic year")
+
+    # 4. Delete current enrollments (ONLY current semester)
+    enrollments = db.exec(
+        select(Enrollment)
+        .join(CourseOffering)
+        .where(
+            Enrollment.student_id == student_id,
+            CourseOffering.semester_id == current_semester.id
+        )
+    ).all()
+
+    for e in enrollments:
+        db.delete(e)
+
+    db.flush()
+
+    # 5. Update section
+    student.section_id = data.section_id
+    db.add(student)
+    db.flush()
+
+    # 6. Get new section course offerings (current semester)
+    new_offerings = db.exec(
+        select(CourseOffering).where(
+            CourseOffering.section_id == data.section_id,
+            CourseOffering.semester_id == current_semester.id
+        )
+    ).all()
+
+    # 7. Create new enrollments
+    for co in new_offerings:
+        enrollment = Enrollment(
+            student_id=student.id,
+            course_offering_id=co.id,
+            status="active"
+        )
+        db.add(enrollment)
+
+    db.commit()
+    db.refresh(student)
+
+    return student
