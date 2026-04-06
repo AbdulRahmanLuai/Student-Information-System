@@ -119,3 +119,61 @@ def get_course_offerings(semester_id: Optional[int] = None, teacher_id: Optional
     results = db.execute(stmt).scalars().all()
 
     return results
+
+@router.put('/course-offerings/{course_offering_id}', response_model=schemas.CourseOfferingOut)
+def update_course_offering_teacher(
+    course_offering_id: int,
+    data: schemas.UpdateCourseOfferingTeacher,
+    db: Session = Depends(get_db),
+    current_user=Depends(require_admin)
+):
+    # 1. Get the course offering
+    course_offering = db.get(CourseOffering, course_offering_id)
+    if not course_offering:
+        raise HTTPException(status_code=404, detail="Course offering not found")
+
+    # 2. Must belong to the current semester
+    current_semester = db.execute(
+        select(Semester).where(Semester.status == SemesterStatus.current)
+    ).scalars().first()
+    if not current_semester:
+        raise HTTPException(status_code=400, detail="No active semester")
+    if course_offering.semester_id != current_semester.id:
+        raise HTTPException(status_code=400, detail="Cannot edit a course offering from a past semester")
+
+    # 3. Get the teacher
+    teacher = db.get(Teacher, data.teacher_id)
+    if not teacher:
+        raise HTTPException(status_code=404, detail=f"Teacher with id {data.teacher_id} not found")
+
+    # 4. Get the course to validate department
+    course = db.get(Course, course_offering.course_id)
+    if not course:
+        raise HTTPException(status_code=500, detail="Inconsistent data: course not found")
+
+    # 5. Validate teacher belongs to same department as course
+    if teacher.department_id != course.department_id:
+        raise HTTPException(
+            status_code=400,
+            detail="Teacher does not belong to the same department as the course"
+        )
+
+    # 6. Apply update
+    course_offering.teacher_id = teacher.id
+    db.add(course_offering)
+    db.commit()
+
+    # 7. Refetch with all relationships
+    stmt = (
+        select(CourseOffering)
+        .options(
+            joinedload(CourseOffering.course).joinedload(Course.department),
+            joinedload(CourseOffering.section),
+            joinedload(CourseOffering.semester),
+            joinedload(CourseOffering.teacher).joinedload(Teacher.user)
+        )
+        .where(CourseOffering.id == course_offering.id)
+    )
+    updated = db.execute(stmt).scalars().first()
+
+    return updated

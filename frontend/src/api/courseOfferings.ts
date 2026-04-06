@@ -39,3 +39,13 @@ export const getAdminCourseOfferings = async (params: {
   const response = await client.get("/admin/course-offerings", { params });
   return response.data;
 };
+
+export const updateCourseOfferingTeacher = async (
+  courseOfferingId: number,
+  teacherId: number
+): Promise<CourseOffering> => {
+  const response = await client.put(`/admin/course-offerings/${courseOfferingId}`, {
+    teacher_id: teacherId,
+  });
+  return response.data;
+};

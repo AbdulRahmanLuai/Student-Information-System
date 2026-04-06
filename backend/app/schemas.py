@@ -268,3 +268,6 @@ class UpdateSectionRequest(BaseModel):
     
 class EnrollmentStatusOut(BaseModel):
     should_enroll: bool
+    
+class UpdateCourseOfferingTeacher(BaseModel):
+    teacher_id: int
