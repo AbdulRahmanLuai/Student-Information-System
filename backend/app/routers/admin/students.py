@@ -125,15 +125,20 @@ def change_student_section(
         raise HTTPException(status_code=400, detail="Section not in current academic year")
 
     # 4. Delete current enrollments (ONLY current semester)
+    from sqlalchemy.orm import joinedload
+
     enrollments = db.exec(
         select(Enrollment)
-        .join(CourseOffering)
+        .options(joinedload(Enrollment.course_offering))
         .where(
             Enrollment.student_id == student_id,
             CourseOffering.semester_id == current_semester.id
         )
     ).all()
 
+    old_course_ids = {e.course_offering.course_id for e in enrollments if e.course_offering}
+
+        
     for e in enrollments:
         db.delete(e)
 
@@ -143,6 +148,7 @@ def change_student_section(
     student.section_id = data.section_id
     db.add(student)
     db.flush()
+
 
     # 6. Get new section course offerings (current semester)
     new_offerings = db.exec(
@@ -154,6 +160,9 @@ def change_student_section(
 
     # 7. Create new enrollments
     for co in new_offerings:
+        if co.course_id not in old_course_ids:
+            continue
+
         enrollment = Enrollment(
             student_id=student.id,
             course_offering_id=co.id,
