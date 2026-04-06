@@ -27,6 +27,12 @@ def get_sections(academic_year_start: int, db: Session = Depends(get_db), curren
 
     return sections
 
+@router.get('/sections/{section_id}', response_model=schemas.SectionOut)
+def get_section(section_id: int, db: Session = Depends(get_db), current_user=Depends(require_admin)):
+    section = db.get(Section, section_id)
+    if not section:
+        raise HTTPException(status_code=404, detail="Section not found")
+    return section
 
 @router.delete('/sections/{section_id}', status_code=status.HTTP_200_OK)
 def delete_section(section_id: int, db: Session = Depends(get_db), current_user=Depends(require_admin)):
