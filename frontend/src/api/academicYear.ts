@@ -38,6 +38,7 @@ export const commitAcademicYear = async (): Promise<void> => {
   await client.post("/admin/academic-year/commit");
 };
 
-export const enrollAll = async (): Promise<void> => {
-  await client.post("/admin/academic-year/enroll-all");
+export const enrollAll = async () => {
+  const response = await client.post("/admin/academic-year/enroll-all");
+  return response.data; 
 };

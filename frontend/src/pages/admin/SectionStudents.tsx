@@ -16,19 +16,25 @@ const SectionStudents = () => {
   const [error, setError] = useState("");
   const [sectionName, setSectionName] = useState("");
   const [sections, setSections] = useState<Section[]>([]);
-  const handleSectionChange = async (studentId: number, newSectionId: number) => {
-    try {
-      await changeStudentSection(studentId, newSectionId);
+  const [pendingMove, setPendingMove] = useState<{ studentId: number; studentName: string; newSectionId: number; newSectionName: string } | null>(null);
+  const handleSectionChange = (studentId: number, studentName: string, newSectionId: number, newSectionName: string) => {
+  setPendingMove({ studentId, studentName, newSectionId, newSectionName });
+};
 
-      // refresh students
-      const response = await client.get("/admin/students", {
-        params: { section_id: Number(sectionId) },
-      });
-      setStudents(response.data);
-    } catch (err: any) {
-      alert(err.response?.data?.detail || "Failed to change section");
-    }
-  };
+const confirmSectionChange = async () => {
+  if (!pendingMove) return;
+  try {
+    await changeStudentSection(pendingMove.studentId, pendingMove.newSectionId);
+    const response = await client.get("/admin/students", {
+      params: { section_id: Number(sectionId) },
+    });
+    setStudents(response.data);
+  } catch (err: any) {
+    alert(err.response?.data?.detail || "Failed to change section");
+  } finally {
+    setPendingMove(null);
+  }
+};
 
   useEffect(() => {
     const fetchData = async () => {
@@ -123,28 +129,67 @@ const SectionStudents = () => {
                   </span>
                 </td>
                 <td className="px-4 py-2 border-b">
-                <select
-                  onChange={(e) =>
-                    handleSectionChange(s.id, Number(e.target.value))
-                  }
-                  defaultValue=""
-                  className="border px-2 py-1 rounded"
-                >
-                  <option value="">Move to...</option>
-                  {sections
-                    .filter(sec => sec.id !== s.section_id)
-                    .map(sec => (
-                      <option key={sec.id} value={sec.id}>
-                        {sec.name}
-                      </option>
-                    ))}
-                </select>
-              </td>
+                  <select
+                    onChange={(e) => {
+                      const selectedId = Number(e.target.value);
+                      const selectedSection = sections.find(sec => sec.id === selectedId);
+                      if (!selectedSection) return;
+                      handleSectionChange(
+                        s.id,
+                        `${s.first_name} ${s.last_name}`,
+                        selectedId,
+                        selectedSection.name
+                      );
+                      e.target.value = "";
+                    }}
+                    defaultValue=""
+                    className="border px-2 py-1 rounded"
+                  >
+                    <option value="">Move to...</option>
+                    {sections
+                      .filter(sec => sec.id !== s.section_id)
+                      .map(sec => (
+                        <option key={sec.id} value={sec.id}>
+                          {sec.name}
+                        </option>
+                      ))}
+                  </select>
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+        {pendingMove && (
+    <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-sm">
+        <h2 className="text-lg font-semibold mb-2">Move Student</h2>
+        <p className="text-gray-600 mb-1">
+          Are you sure you want to move{" "}
+          <span className="font-medium text-gray-800">{pendingMove.studentName}</span>{" "}
+          to section{" "}
+          <span className="font-medium text-gray-800">{pendingMove.newSectionName}</span>?
+        </p>
+        <p className="text-sm text-gray-500 mb-4">
+          This will remove their current enrollments and re-enroll them in the new section's course offerings.
+        </p>
+        <div className="flex gap-2 justify-end">
+          <button
+            onClick={() => setPendingMove(null)}
+            className="px-4 py-2 text-sm rounded border hover:bg-gray-50"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={confirmSectionChange}
+            className="px-4 py-2 text-sm rounded bg-yellow-500 text-white hover:bg-yellow-600"
+          >
+            Confirm Move
+          </button>
+        </div>
+      </div>
+    </div>
+  )}
     </AdminLayout>
   );
 };

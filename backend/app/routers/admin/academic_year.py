@@ -621,7 +621,7 @@ def commit_academic_year(db: Session = Depends(get_db)):
 
     
     
-@router.post("/enroll-all")
+@router.post("/enroll-all", response_model=schemas.EnrollAllOut)
 def enroll(db: Session = Depends(get_db)):
     try:
         valid_state, current_semester = check_valid_enrollment_state(db)
@@ -658,6 +658,8 @@ def enroll(db: Session = Depends(get_db)):
         for student in students:
             students_by_section[student.section_id].append(student)
 
+        enrolled_student_ids = set()
+        enrollment_count = 0
         for co in course_offerings:
             for student in students_by_section.get(co.section_id, []):
 
@@ -667,10 +669,18 @@ def enroll(db: Session = Depends(get_db)):
                     status="active"
                 )
                 db.add(enrollment)
+                
+                enrolled_student_ids.add(student.id)
+                enrollment_count += 1
 
         db.commit()
 
-        return {"message": "Enrollments created successfully"}
+        return  {
+            "message": "Enrollments created successfully",
+            "student_count": len(enrolled_student_ids),
+            "enrollment_count": enrollment_count,
+            "course_offering_count": len(course_offerings)
+        }
 
     except IntegrityError:
         db.rollback()

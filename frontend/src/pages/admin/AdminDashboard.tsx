@@ -26,6 +26,12 @@ const AdminDashboard = () => {
   const [error, setError] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
   const navigate = useNavigate();
+  const [endSemesterError, setEndSemesterError] = useState<string[]>([]);
+  const [enrollResult, setEnrollResult] = useState<{
+  student_count: number;
+  enrollment_count: number;
+  course_offering_count: number;
+} | null>(null);
 
   // Add section modal
   const [showAddSection, setShowAddSection] = useState(false);
@@ -147,13 +153,16 @@ const AdminDashboard = () => {
 const handleEndSemester = async () => {
   if (!confirm("Are you sure you want to end the current semester?")) return;
   setActionLoading(true);
+  setEndSemesterError([]);
   try {
     await endSemester();
     const data = await getSemesters();
     setSemesters(data);
     setSections([]);
   } catch (err: any) {
-    setError(err.response?.data?.detail || "Failed to end semester");
+    const detail = err.response?.data?.detail || "Failed to end semester";
+    const lines = detail.split("\n").map((l: string) => l.trim()).filter(Boolean);
+    setEndSemesterError(lines);
   } finally {
     setActionLoading(false);
   }
@@ -204,7 +213,9 @@ const handleAdvanceSemester = async () => {
     if (!confirm("Enroll all students into their course offerings?")) return;
     setActionLoading(true);
     try {
-      await enrollAll();
+      const result = await enrollAll();
+      console.log("ENROLL RESULT:", result);
+      setEnrollResult(result);
       setShouldEnroll(false);
       const data = await getSemesters();
       setSemesters(data);
@@ -223,45 +234,80 @@ const handleAdvanceSemester = async () => {
       {error && <p className="text-red-500 mb-4">{error}</p>}
 
       {/* Current Semester */}
-      <div className="bg-white rounded-lg shadow p-6 mb-6">
-        <h2 className="text-lg font-semibold mb-4">Current Semester</h2>
-        {currentSemester ? (
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-700 font-medium">
-                {currentSemester.academic_year_start}/{currentSemester.academic_year_end} — Semester {currentSemester.number}
-              </p>
-              <p className="text-sm text-gray-500 capitalize">{currentSemester.status}</p>
-            </div>
-            <button
-              onClick={handleEndSemester}
-              disabled={actionLoading}
-              className="bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600 disabled:bg-gray-400"
-            >
-              End Semester
-            </button>
-          </div>
-        ) : (
-          <p className="text-gray-500">No active semester.</p>
-        )}
+<div className="bg-white rounded-lg shadow p-6 mb-6">
+  <h2 className="text-lg font-semibold mb-4">Current Semester</h2>
+  {currentSemester ? (
+    <div>
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-gray-700 font-medium">
+            {currentSemester.academic_year_start}/{currentSemester.academic_year_end} — Semester {currentSemester.number}
+          </p>
+          <p className="text-sm text-gray-500 capitalize">{currentSemester.status}</p>
+        </div>
+        <button
+          onClick={handleEndSemester}
+          disabled={actionLoading}
+          className="bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600 disabled:bg-gray-400"
+        >
+          End Semester
+        </button>
       </div>
 
-      {/* Enroll All — independent of semester actions */}
-      {shouldEnroll && (
-        <div className="bg-white rounded-lg shadow p-6 mb-6">
-          <h2 className="text-lg font-semibold mb-4">Student Enrollment</h2>
-          <p className="text-sm text-gray-500 mb-3">
-            The new academic year has been committed. Enroll all students into their course offerings.
+      {endSemesterError.length > 0 && (
+        <div className="mt-4 bg-red-50 border border-red-200 rounded p-4">
+          <p className="text-red-700 font-medium text-sm mb-2">
+            {endSemesterError[0]}
           </p>
-          <button
-            onClick={handleEnrollAll}
-            disabled={actionLoading}
-            className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 disabled:bg-gray-400"
-          >
-            Enroll All Students
-          </button>
+          <ul className="space-y-1">
+            {endSemesterError.slice(1).map((line, i) => (
+              <li key={i} className="text-red-600 text-sm">
+                {line}
+              </li>
+            ))}
+          </ul>
         </div>
       )}
+    </div>
+  ) : (
+    <p className="text-gray-500">No active semester.</p>
+  )}
+</div>
+
+      {/* Enroll All — independent of semester actions */}
+{(shouldEnroll || enrollResult) && (
+  <div className="bg-white rounded-lg shadow p-6 mb-6">
+    <h2 className="text-lg font-semibold mb-4">Student Enrollment</h2>
+
+    {shouldEnroll && (
+      <>
+        <p className="text-sm text-gray-500 mb-3">
+          The new academic year has been committed. Enroll all students into their course offerings.
+        </p>
+        <button
+          onClick={handleEnrollAll}
+          disabled={actionLoading}
+          className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 disabled:bg-gray-400"
+        >
+          Enroll All Students
+        </button>
+      </>
+    )}
+
+    {enrollResult && (
+      <div className="mt-4 bg-green-50 border border-green-200 rounded p-4">
+        <p className="text-green-700 font-medium text-sm mb-1">
+          Enrollments completed successfully
+        </p>
+        <ul className="text-sm text-green-600 space-y-1">
+          <li>Students processed: {enrollResult.student_count}</li>
+          <li>Enrollments created: {enrollResult.enrollment_count}</li>
+          <li>Course offerings: {enrollResult.course_offering_count}</li>
+        </ul>
+      </div>
+    )}
+  </div>
+)}
 
       {/* Sections */}
       {currentSemester && (
@@ -331,7 +377,7 @@ const handleAdvanceSemester = async () => {
         <div className="bg-white rounded-lg shadow p-6 mb-6">
           <h2 className="text-lg font-semibold mb-4">Semester Actions</h2>
           <div className="flex flex-wrap gap-3">
-            {latestYearSemesters.some((s) => s.status === "completed") && (
+            {latestYearSemesters.some((s) => s.status === "completed") && !allCompletedInLatestYear && (
               <button
                 onClick={handleAdvanceSemester}
                 disabled={actionLoading}

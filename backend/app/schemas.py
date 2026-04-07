@@ -271,3 +271,9 @@ class EnrollmentStatusOut(BaseModel):
     
 class UpdateCourseOfferingTeacher(BaseModel):
     teacher_id: int
+    
+class EnrollAllOut(BaseModel):
+    message: str
+    student_count: int
+    enrollment_count: int
+    course_offering_count: int

@@ -4,7 +4,8 @@ from typing import List
 from datetime import date
 from ... import schemas
 from ...database import get_db
-from ...models import Semester, SemesterStatus, CourseOffering, Enrollment, Student, StudentStatus
+from sqlalchemy.orm import joinedload
+from ...models import Semester, SemesterStatus, CourseOffering, Enrollment, Student, StudentStatus, Teacher, Course
 from .dependencies import require_admin
 
 router = APIRouter()
@@ -126,37 +127,60 @@ def end_semester(db: Session = Depends(get_db)):
     if not semester:
         raise HTTPException(status_code=404, detail="No active semester found")
 
-    active_enrollment = db.execute(
-        select(Enrollment)
-        .join(CourseOffering, Enrollment.course_offering_id == CourseOffering.id)
+
+
+    # Find all course offerings that still have active enrollments
+    active_offerings = db.execute(
+        select(CourseOffering)
+        .options(
+            joinedload(CourseOffering.course),
+            joinedload(CourseOffering.section),
+            joinedload(CourseOffering.teacher).joinedload(Teacher.user)
+        )
         .where(
             CourseOffering.semester_id == semester.id,
-            Enrollment.status == "active"
+            CourseOffering.id.in_(
+                select(Enrollment.course_offering_id)
+                .where(Enrollment.status == "active")
+                .distinct()
+            )
         )
-    ).scalars().first()
+    ).scalars().all()
+    
+    
+
+    if active_offerings:
+        pending = [
+            f"- {co.course.name} "
+            f"(Section {co.section.grade}{co.section.name}) "
+            f"— {co.teacher.user.first_name} {co.teacher.user.last_name}"
+            for co in active_offerings
+        ]
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Cannot end semester. The following course offerings still have uncommitted marks:\n"
+                + "\n".join(pending)
+            )
+        )
 
     completed_enrollment = db.execute(
-        select(Enrollment)
-        .join(CourseOffering, Enrollment.course_offering_id == CourseOffering.id)
-        .where(
-            CourseOffering.semester_id == semester.id,
-            Enrollment.status == "completed"
-        )
-    ).scalars().first()
-    
+    select(Enrollment)
+    .join(CourseOffering, Enrollment.course_offering_id == CourseOffering.id)
+    .where(
+        CourseOffering.semester_id == semester.id,
+        Enrollment.status == "completed"
+    )
+).scalars().first()
+
     if not completed_enrollment:
         raise HTTPException(status_code=400, detail="Cannot end semester with no completed enrollments")
-
-
-    if active_enrollment:
-        raise HTTPException(status_code=400, detail="Cannot end semester with active enrollments")
-
+    
     semester.status = SemesterStatus.completed
     db.commit()
     db.refresh(semester)
 
     return semester
-
 
 @router.post("/semesters/advance", response_model=schemas.SemesterOut)
 def advance_semester(db: Session = Depends(get_db)):
