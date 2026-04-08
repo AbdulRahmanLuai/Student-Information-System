@@ -4,7 +4,7 @@ import AdminLayout from "../../components/AdminLayout";
 import { getSemesters, endSemester, advanceSemester } from "../../api/semesters";
 import { startAcademicYear, enrollAll, getEnrollmentStatus } from "../../api/academicYear";
 import { getSections, createSection, deleteSection } from "../../api/sections";
-import { Semester, Section } from "../../types";
+import { Semester, Section, Student, Teacher } from "../../types";
 
 const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
 
@@ -33,6 +33,7 @@ const AdminDashboard = () => {
   course_offering_count: number;
 } | null>(null);
 
+
   // Add section modal
   const [showAddSection, setShowAddSection] = useState(false);
   const [selectedGrade, setSelectedGrade] = useState<number | null>(null);
@@ -50,6 +51,12 @@ const AdminDashboard = () => {
     return sectionsInSameGrade.length <= 1;
   };
 
+  // Portal tab switching
+  // Active tab in portal
+  const [activePortalTab, setActivePortalTab] = useState<"students" | "teachers" | "sections" | "departments">("sections");
+  const [students, setStudents] = useState<Student[]>([]);
+  const [teachers, setTeachers] = useState<Teacher[]>([]);
+  const [portalLoading, setPortalLoading] = useState(false);
   useEffect(() => {
     const fetch = async () => {
       try {
@@ -225,6 +232,26 @@ const handleAdvanceSemester = async () => {
       setActionLoading(false);
     }
   };
+  const renderPortalTab = () => {
+  switch (activePortalTab) {
+    case "students":
+      return (
+        <div>
+          <p className="text-gray-500 mb-2">Student actions placeholder</p>
+          {/* Later: search, view, handle leaving, profile */}
+        </div>
+      );
+    case "teachers":
+      return (
+        <div>
+          <p className="text-gray-500 mb-2">Teacher actions placeholder</p>
+          {/* Later: search, view course offerings */}
+        </div>
+      );
+    default:
+      return null;
+  }
+};
 
   return (
     <AdminLayout>
@@ -309,68 +336,7 @@ const handleAdvanceSemester = async () => {
   </div>
 )}
 
-      {/* Sections */}
-      {currentSemester && (
-        <div className="bg-white rounded-lg shadow p-6 mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold">Sections</h2>
-            <button
-              onClick={() => {
-                setShowAddSection(true);
-                setSelectedGrade(null);
-                setAddSectionError("");
-              }}
-              className="text-sm bg-gray-800 text-white px-3 py-1.5 rounded hover:bg-gray-900"
-            >
-              + Add Section
-            </button>
-          </div>
-
-          {sections.length === 0 ? (
-            <p className="text-gray-500">No sections found.</p>
-          ) : (
-            <div className="divide-y">
-              {sections.map((s) => {
-                const isDisabled = isLastSectionOfGrade(s);
-                return (
-                  <div key={s.id} className="py-3 flex items-center justify-between">
-                    <p className="font-medium">Grade {s.grade} — {s.name}</p>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => navigate(`/admin/sections/${s.id}/students`)}
-                        className="text-sm bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700"
-                      >
-                        Students
-                      </button>
-                      <button
-                        onClick={() => navigate(`/admin/sections/${s.id}/course-offerings`)}
-                        className="text-sm bg-indigo-600 text-white px-3 py-1 rounded hover:bg-indigo-700"
-                      >
-                        Course Offerings
-                      </button>
-                      <button
-                        onClick={() => {
-                          setSectionToDelete(s);
-                          setDeleteSectionError("");
-                        }}
-                        disabled={isDisabled}
-                        title={isDisabled ? "Cannot delete the last section of a grade" : "Delete section"}
-                        className={`text-sm px-3 py-1 rounded transition-colors ${
-                          isDisabled
-                            ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-                            : "bg-red-500 text-white hover:bg-red-600"
-                        }`}
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      )}
+      
 
       {/* Semester Actions — only when no current semester */}
       {!currentSemester && (
@@ -398,6 +364,114 @@ const handleAdvanceSemester = async () => {
           </div>
         </div>
       )}
+
+<div className="bg-white rounded-lg shadow p-6 mb-6">
+  <h2 className="text-lg font-semibold mb-4">Admin Portal</h2>
+  
+        {/* Tab buttons */}
+        <div className="flex gap-2 mb-4 border-b border-gray-200">
+          {["students", "teachers", "sections", "departments"].map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActivePortalTab(tab as any)}
+              className={`px-4 py-2 font-medium rounded-t ${
+                activePortalTab === tab
+                  ? "bg-gray-100 border-b-2 border-blue-600"
+                  : "bg-white text-gray-600 hover:bg-gray-50"
+              }`}
+            >
+              {tab.charAt(0).toUpperCase() + tab.slice(1)}
+            </button>
+          ))}
+        </div>
+
+        {/* Tab content */}
+        <div>
+          {activePortalTab === "sections" && (
+            <div>
+              {/* Sections */}
+              {currentSemester && (
+                <div className="bg-white rounded-lg shadow p-6 mb-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-lg font-semibold">Sections</h2>
+                    <button
+                      onClick={() => {
+                        setShowAddSection(true);
+                        setSelectedGrade(null);
+                        setAddSectionError("");
+                      }}
+                      className="text-sm bg-gray-800 text-white px-3 py-1.5 rounded hover:bg-gray-900"
+                    >
+                      + Add Section
+                    </button>
+                  </div>
+
+                  {sections.length === 0 ? (
+                    <p className="text-gray-500">No sections found.</p>
+                  ) : (
+                    <div className="divide-y">
+                      {sections.map((s) => {
+                        const isDisabled = isLastSectionOfGrade(s);
+                        return (
+                          <div key={s.id} className="py-3 flex items-center justify-between">
+                            <p className="font-medium">Grade {s.grade} — {s.name}</p>
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => navigate(`/admin/sections/${s.id}/students`)}
+                                className="text-sm bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700"
+                              >
+                                Students
+                              </button>
+                              <button
+                                onClick={() => navigate(`/admin/sections/${s.id}/course-offerings`)}
+                                className="text-sm bg-indigo-600 text-white px-3 py-1 rounded hover:bg-indigo-700"
+                              >
+                                Course Offerings
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setSectionToDelete(s);
+                                  setDeleteSectionError("");
+                                }}
+                                disabled={isDisabled}
+                                title={isDisabled ? "Cannot delete the last section of a grade" : "Delete section"}
+                                className={`text-sm px-3 py-1 rounded transition-colors ${
+                                  isDisabled
+                                    ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+                                    : "bg-red-500 text-white hover:bg-red-600"
+                                }`}
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+          {activePortalTab === "students" && (
+            <div>
+              <p className="text-gray-500">Student actions will be implemented here (search, leave, profile view).</p>
+            </div>
+          )}
+
+          {activePortalTab === "teachers" && (
+            <div>
+              <p className="text-gray-500">Teacher actions will be implemented here (search, course offerings view).</p>
+            </div>
+          )}
+
+          {activePortalTab === "departments" && (
+            <div>
+              <p className="text-gray-500">Departments management will be implemented here (list, add, edit, delete).</p>
+            </div>
+          )}
+        </div>
+      </div>
 
       {/* Semesters List */}
       <div className="bg-white rounded-lg shadow p-6">

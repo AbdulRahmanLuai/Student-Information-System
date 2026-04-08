@@ -117,3 +117,6 @@ export interface CourseAssignment {
 export interface EnrollmentStatus {
   should_enroll: boolean;
 }
+
+
+
