@@ -1,11 +1,11 @@
 import { Student, Section } from "../types";
 import { useState } from "react";
+import { Link } from "react-router-dom";
 
 interface StudentCardProps {
   student: Student;
   sections: Section[];
   onMoveSection: (studentId: number, newSectionId: number) => void;
-  onViewProfile: (studentId: number) => void;
 }
 
 const statusStyle: Record<string, string> = {
@@ -13,7 +13,7 @@ const statusStyle: Record<string, string> = {
   graduated: "bg-blue-100 text-blue-700",
 };
 
-const StudentCard = ({ student: s, sections, onMoveSection, onViewProfile }: StudentCardProps) => {
+const StudentCard = ({ student: s, sections, onMoveSection }: StudentCardProps) => {
   const [pendingMove, setPendingMove] = useState<{ newSectionId: number; newSectionName: string } | null>(null);
 
   const handleMoveClick = (newSectionId: number, newSectionName: string) => {
@@ -65,19 +65,19 @@ const StudentCard = ({ student: s, sections, onMoveSection, onViewProfile }: Stu
             >
               <option value="">Move to...</option>
               {sections
-                .filter(sec => sec.id !== s.section?.id)  // ← filter out current section
+                .filter(sec => sec.id !== s.section?.id)
                 .map((sec) => (
                   <option key={sec.id} value={sec.id}>
                     {sec.name}
                   </option>
                 ))}
             </select>
-            <button
-              onClick={() => onViewProfile(s.id)}
+            <Link
+              to={`/admin/students/${s.id}`}
               className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
             >
               View Profile
-            </button>
+            </Link>
           </div>
         </td>
       </tr>

@@ -4,7 +4,7 @@ import TeacherLayout from "../../components/TeacherLayout";
 import { getEnrollments, enterMark, commitMarks } from "../../api/courseOfferings";
 import { Enrollment } from "../../types";
 
-const CourseOfferingDetails = () => {
+const TeacherCourseOfferingDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
@@ -135,4 +135,4 @@ const CourseOfferingDetails = () => {
   );
 };
 
-export default CourseOfferingDetails;
+export default TeacherCourseOfferingDetails;

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi import status
 from sqlmodel import Session, select
 from typing import List
@@ -24,6 +24,20 @@ def create_department(department_data: schemas.DepartmentCreate, db: Session = D
 @router.get('/departments', response_model=List[schemas.DepartmentOut])
 def get_departments(db: Session = Depends(get_db), current_user=Depends(require_admin)):
     
-    departments = db.exec(select(Department)).scalars().all()
+    departments = db.exec(select(Department)).all()
     
     return departments
+
+from fastapi import HTTPException, status
+
+@router.get('/departments/{department_id}', response_model=schemas.DepartmentOut)
+def get_department(department_id: int, db: Session = Depends(get_db)):
+    department = db.get(Department, department_id)
+    
+    if not department:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, 
+            detail=f"No department with id {department_id} exists"
+        )
+        
+    return department

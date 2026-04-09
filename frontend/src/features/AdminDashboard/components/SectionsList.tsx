@@ -1,80 +1,60 @@
+import { Link } from "react-router-dom";
 import { Section } from "../../../types";
 
 interface SectionsListProps {
   sections: Section[];
-  onNavigateStudents: (id: number) => void;
-  onNavigateCourseOfferings: (id: number) => void;
-  onDeleteClick: (section: Section) => void;
-  isLastSectionOfGrade: (section: Section) => boolean;
   onAddSection: () => void;
+  onDeleteSection: (section: Section) => void;
+  isLastSectionOfGrade: (section: Section) => boolean;
 }
 
-const SectionsList = ({
-  sections,
-  onNavigateStudents,
-  onNavigateCourseOfferings,
-  onDeleteClick,
-  isLastSectionOfGrade,
-  onAddSection,
-}: SectionsListProps) => {
+const SectionsList = ({ sections, onAddSection, onDeleteSection, isLastSectionOfGrade }: SectionsListProps) => {
   return (
-    <div className="bg-white rounded-lg shadow p-6 mb-6">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold">Sections</h2>
+    <div>
+      <div className="flex justify-end mb-4">
         <button
           onClick={onAddSection}
-          className="text-sm bg-gray-800 text-white px-3 py-1.5 rounded hover:bg-gray-900"
+          className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
         >
-          + Add Section
+          Add Section
         </button>
       </div>
-
-      {sections.length === 0 ? (
-        <p className="text-gray-500">No sections found.</p>
-      ) : (
-        <div className="divide-y">
-          {sections.map((s) => {
-            const isDisabled = isLastSectionOfGrade(s);
-            return (
-              <div key={s.id} className="py-3 flex items-center justify-between">
-                <p className="font-medium">
-                  Grade {s.grade} — {s.name}
-                </p>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => onNavigateStudents(s.id)}
-                    className="text-sm bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700"
-                  >
-                    Students
-                  </button>
-                  <button
-                    onClick={() => onNavigateCourseOfferings(s.id)}
-                    className="text-sm bg-indigo-600 text-white px-3 py-1 rounded hover:bg-indigo-700"
-                  >
-                    Course Offerings
-                  </button>
-                  <button
-                    onClick={() => onDeleteClick(s)}
-                    disabled={isDisabled}
-                    title={
-                      isDisabled
-                        ? "Cannot delete the last section of a grade"
-                        : "Delete section"
-                    }
-                    className={`text-sm px-3 py-1 rounded transition-colors ${
-                      isDisabled
-                        ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-                        : "bg-red-500 text-white hover:bg-red-600"
-                    }`}
-                  >
-                    Delete
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
+      <div className="overflow-x-auto">
+        <table className="min-w-full bg-white border rounded-lg shadow">
+          <thead className="bg-gray-100 text-left">
+            <tr>
+              <th className="px-4 py-2 border-b">Section</th>
+              <th className="px-4 py-2 border-b">Academic Year</th>
+              <th className="px-4 py-2 border-b">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {sections.map((section) => (
+              <tr key={section.id} className="hover:bg-gray-50">
+                <td className="px-4 py-2 border-b">{section.grade}{section.name}</td>
+                <td className="px-4 py-2 border-b">{section.academic_year_start} - {section.academic_year_start + 1}</td>
+                <td className="px-4 py-2 border-b">
+                  <div className="flex gap-2">
+                    <Link
+                      to={`/admin/sections/${section.id}`}
+                      className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
+                    >
+                      Details
+                    </Link>
+                    <button
+                      onClick={() => onDeleteSection(section)}
+                      disabled={isLastSectionOfGrade(section)}
+                      className="px-3 py-1 text-sm bg-red-600 text-white rounded hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 };

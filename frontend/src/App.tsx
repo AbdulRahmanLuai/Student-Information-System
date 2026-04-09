@@ -5,12 +5,15 @@ import { ProtectedRoute } from "./components/ProtectedRoute";
 // Pages
 import Login from "./pages/Login";
 import TeacherDashboard from "./pages/teacher/TeacherDashboard";
-import CourseOfferingDetails from "./pages/teacher/CourseOfferingDetails";
+import TeacherCourseOfferingDetails from "./pages/teacher/TeacherCourseOfferingDetails";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AcademicYearSections from "./pages/admin/AcademicYearSections";
 import AcademicYearSectionDetail from "./pages/admin/AcademicYearSectionDetail";
-import SectionStudents from "./pages/admin/SectionStudents";
-import SectionCourseOfferings from "./pages/admin/SectionCourseOfferings";
+import StudentProfile from "./pages/admin/StudentProfile";
+import TeacherProfile from "./pages/admin/TeacherProfile";
+import CourseOfferingDetails from "./pages/admin/CourseOfferingDetails";
+import SectionDetail from "./pages/admin/SectionDetail";
+import DepartmentDetail from "./pages/admin/DepartmentDetail";
 
 const RootRedirect = () => {
   const { isAuthenticated, role, isLoading } = useAuth();
@@ -39,7 +42,7 @@ function App() {
             path="/teacher/course-offerings/:id"
             element={
               <ProtectedRoute allowedRole="teacher">
-                <CourseOfferingDetails />
+                <TeacherCourseOfferingDetails />
               </ProtectedRoute>
             }
           />
@@ -69,19 +72,44 @@ function App() {
               </ProtectedRoute>
             }
           />
+          {/* Removed standalone SectionStudents and SectionCourseOfferings routes */}
           <Route
-            path="/admin/sections/:sectionId/students"
+            path="/admin/students/:id"
             element={
               <ProtectedRoute allowedRole="admin">
-                <SectionStudents />
+                <StudentProfile />
               </ProtectedRoute>
             }
           />
           <Route
-            path="/admin/sections/:sectionId/course-offerings"
+            path="/admin/teachers/:id"
             element={
               <ProtectedRoute allowedRole="admin">
-                <SectionCourseOfferings />
+                <TeacherProfile />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/course-offerings/:id"
+            element={
+              <ProtectedRoute allowedRole="admin">
+                <CourseOfferingDetails />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/sections/:sectionId"
+            element={
+              <ProtectedRoute allowedRole="admin">
+                <SectionDetail />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/departments/:id"
+            element={
+              <ProtectedRoute allowedRole="admin">
+                <DepartmentDetail />
               </ProtectedRoute>
             }
           />

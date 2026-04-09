@@ -14,3 +14,8 @@ export const searchStudents = async (query: string): Promise<Student[]> => {
   const res = await client.get("admin/students/search", { params });
   return res.data;
 };
+
+export const getStudentById = async (id: number): Promise<Student> => {
+  const response = await client.get(`/admin/students/${id}`);
+  return response.data;
+};

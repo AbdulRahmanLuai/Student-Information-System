@@ -1,12 +1,13 @@
 from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlmodel import Session, select, String
-from sqlalchemy import cast, func, or_
+from sqlalchemy import cast, func, or_, select, func, cast, String
 from sqlalchemy.orm import joinedload, contains_eager
 from typing import List, Optional
 from ... import schemas
 from ...database import get_db
 from ...models import Teacher, User
 from .dependencies import require_admin
+
 
 router = APIRouter()
 
@@ -21,8 +22,7 @@ def get_teachers(department_id: Optional[int] = None, db: Session = Depends(get_
     results = db.execute(stmt).scalars().all()
     return results
 
-from sqlalchemy import select, func, cast, String
-from sqlalchemy.orm import joinedload
+
 
 @router.get('/teachers/search', response_model=List[schemas.TeacherOut])
 def search(
@@ -50,3 +50,12 @@ def search(
     
     results = db.execute(stmt).scalars().all()
     return results
+
+@router.get('/teachers/{teacher_id}', response_model=schemas.TeacherOut)
+def get_teacher(teacher_id: int, db: Session = Depends(get_db)):
+    
+    stmt = select(Teacher).options(joinedload(Teacher.user)).where(Teacher.id == teacher_id)
+    result = db.execute(stmt).scalars().first()
+    if not result:
+        raise HTTPException(404, f"Teacher with id: {teacher_id} not found")
+    return result

@@ -4,7 +4,7 @@ from sqlalchemy.orm import joinedload
 from typing import List, Optional
 from ... import schemas
 from ...database import get_db
-from ...models import Course, Section, Semester, SemesterStatus, Teacher, CourseOffering, Enrollment
+from ...models import Course, Section, Semester, SemesterStatus, Teacher, CourseOffering, Enrollment, Department
 from .dependencies import require_admin
 
 router = APIRouter()
@@ -86,10 +86,14 @@ def create_course_offering(data: schemas.CourseOfferingCreate, db: Session = Dep
 
 
 @router.get('/course-offerings', response_model=List[schemas.CourseOfferingOut])
-def get_course_offerings(semester_id: Optional[int] = None, teacher_id: Optional[int] = None, section_id: Optional[int] = None, db: Session = Depends(get_db),
-                         current_user=Depends(require_admin)):
-
-    # default to current semester if no semester_id provided
+def get_course_offerings(
+    semester_id: Optional[int] = None,
+    teacher_id: Optional[int] = None,
+    section_id: Optional[int] = None,
+    department_id: Optional[int] = None,         
+    db: Session = Depends(get_db),
+    current_user=Depends(require_admin)
+):
     if not semester_id:
         current_semester = db.execute(select(Semester).where(Semester.status == SemesterStatus.current)).scalars().first()
         if not current_semester:
@@ -107,17 +111,23 @@ def get_course_offerings(semester_id: Optional[int] = None, teacher_id: Optional
         .where(CourseOffering.semester_id == semester_id)
     )
     if teacher_id:
-        teacher = db.execute(select(Teacher).where(Teacher.id == teacher_id))
+        teacher = db.get(Teacher, teacher_id)
         if not teacher:
-            raise HTTPException(status_code=404, detail=f"teacher with id {teacher_id} not found")
+            raise HTTPException(404, f"teacher with id {teacher_id} not found")
+        
         stmt = stmt.where(CourseOffering.teacher_id == teacher_id)
     if section_id:
-        section = db.execute(select(Section).where(Section.id == section_id))
+        section = db.get(Section, section_id)
         if not section:
-            raise HTTPException(status_code=404, detail=f"section with id {section_id} not found")
+            raise HTTPException(404, f"section with id {section_id} not found")
         stmt = stmt.where(CourseOffering.section_id == section_id)
-    results = db.execute(stmt).scalars().all()
+    if department_id:
+        department = db.get(Department, department_id)
+        if not department:
+            raise HTTPException(404, f"department with id {department_id} not found")
+        stmt = stmt.join(CourseOffering.course).where(Course.department_id == department_id)
 
+    results = db.execute(stmt).scalars().unique().all()
     return results
 
 @router.put('/course-offerings/{course_offering_id}', response_model=schemas.CourseOfferingOut)

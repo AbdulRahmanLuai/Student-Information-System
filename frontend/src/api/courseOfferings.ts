@@ -58,3 +58,9 @@ export const getCourseOfferingsForTeacher = async (
   });
   return response.data;
 };
+
+
+export const getCourseOfferingById = async (id: number): Promise<CourseOffering> => {
+  const response = await client.get(`/admin/course-offerings/${id}`);
+  return response.data;
+};

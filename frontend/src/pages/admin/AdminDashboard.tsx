@@ -80,19 +80,14 @@ const AdminDashboard = () => {
         activeTab={activePortalTab}
         onTabChange={setActivePortalTab}
         sections={sections}
-        onNavigateStudents={(id) => navigate(`/admin/sections/${id}/students`)}
-        onNavigateCourseOfferings={(id) =>
-          navigate(`/admin/sections/${id}/course-offerings`)
-        }
-        onDeleteClick={setSectionToDelete}
-        isLastSectionOfGrade={isLastSectionOfGrade}
         onAddSection={() => {
           setShowAddSection(true);
           setSelectedGrade(null);
           setAddSectionError("");
         }}
         currentSemesterExists={!!currentSemester}
-        onStudentSelect={(student) => console.log("Selected student:", student)}
+        onDeleteSection={setSectionToDelete}
+        isLastSectionOfGrade={isLastSectionOfGrade}
       />
 
       <SemestersList semesters={semesters} loading={loading} />
