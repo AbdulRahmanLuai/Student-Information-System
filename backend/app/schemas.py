@@ -149,8 +149,9 @@ class StudentOut(BaseModel):
     last_name: str
     email: str
     enrollment_date: Optional[date] = None
-    section_id: int
     status: StudentStatus
+    
+    section: Optional[SectionOut] = None
 
     class Config:
         from_attributes = True

@@ -1,5 +1,11 @@
-import { Section } from "../../../types";
+import { Section, Student, Teacher, User } from "../../../types";
 import SectionsList from "./SectionsList";
+import StudentSearchBar from "./StudentSearchBar";
+import TeacherSearchBar from "./TeacherSearchBar";
+import { useState } from "react";
+import StudentCard from "../../../components/StudentCard";
+import { getSections } from "../../../api/sections"; // adjust path as needed
+import { changeStudentSection } from "../../../api/students"; // adjust path
 
 interface AdminPortalTabsProps {
   activeTab: "students" | "teachers" | "sections" | "departments";
@@ -11,6 +17,7 @@ interface AdminPortalTabsProps {
   isLastSectionOfGrade: (section: Section) => boolean;
   onAddSection: () => void;
   currentSemesterExists: boolean;
+  onStudentSelect: (student: Student) => void;
 }
 
 const AdminPortalTabs = ({
@@ -23,8 +30,49 @@ const AdminPortalTabs = ({
   isLastSectionOfGrade,
   onAddSection,
   currentSemesterExists,
+  onStudentSelect,
 }: AdminPortalTabsProps) => {
   const tabs = ["students", "teachers", "sections", "departments"] as const;
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [sameGradeSections, setSameGradeSections] = useState<Section[]>([]);
+  const [selectedTeacher, setSelectedTeacher] = useState<Teacher | null>(null);
+
+    const handleTeacherSelect = (teacher: Teacher) => {
+    setSelectedTeacher(teacher);
+    // TODO: show teacher details / actions
+    };
+
+  const handleStudentSelect = async (student: Student) => {
+    setSelectedStudent(student);
+    onStudentSelect(student);
+
+    if (student.section) {
+      try {
+        const allSections = await getSections(student.section.academic_year_start);
+        const sameGrade = allSections.filter((s) => s.grade === student.section?.grade);
+        setSameGradeSections(sameGrade);
+      } catch (err) {
+        console.error("Failed to load sections", err);
+      }
+    }
+  };
+
+  const handleMoveSection = async (studentId: number, newSectionId: number) => {
+    try {
+      await changeStudentSection(studentId, newSectionId);
+      // Optionally refetch the student data to update section info
+      // For now, just show success and maybe clear selection
+      alert("Student moved successfully");
+      setSelectedStudent(null); // clear card after move
+    } catch (err: any) {
+      alert(err.response?.data?.detail || "Failed to move student");
+    }
+  };
+
+  const handleViewProfile = (studentId: number) => {
+    // TODO: navigate to profile page
+    console.log("View profile", studentId);
+  };
 
   return (
     <div className="bg-white rounded-lg shadow p-6 mb-6">
@@ -58,14 +106,46 @@ const AdminPortalTabs = ({
           />
         )}
         {activeTab === "students" && (
-          <p className="text-gray-500">
-            Student actions will be implemented here (search, leave, profile view).
-          </p>
-        )}
+            <div>
+                <StudentSearchBar onSelect={handleStudentSelect} />
+                {selectedStudent && (
+                <div className="overflow-x-auto mt-4">
+                    <table className="min-w-full bg-white border rounded-lg shadow text-sm">
+                    <thead className="bg-gray-50 text-left text-gray-600">
+                         <tr>
+                        <th className="px-4 py-2 border-b">Name</th>
+                        <th className="px-4 py-2 border-b">Email</th>
+                        <th className="px-4 py-2 border-b">Enrollment Date</th>
+                        <th className="px-4 py-2 border-b">Status</th>
+                        <th className="px-4 py-2 border-b">Section</th>
+                        <th className="px-4 py-2 border-b">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                        <StudentCard
+                        student={selectedStudent}
+                        sections={sameGradeSections}
+                        onMoveSection={handleMoveSection}
+                        onViewProfile={handleViewProfile}
+                        />
+                    </tbody>
+                    </table>
+                </div>
+                )}
+            </div>
+)}
         {activeTab === "teachers" && (
-          <p className="text-gray-500">
-            Teacher actions will be implemented here (search, course offerings view).
-          </p>
+        <div>
+            <TeacherSearchBar onSelect={handleTeacherSelect} />
+            {selectedTeacher && (
+            <div className="mt-4 p-4 border rounded bg-gray-50">
+                <p><strong>Name:</strong> {selectedTeacher.user.first_name} {selectedTeacher.user.last_name}</p>
+                <p><strong>Email:</strong> {selectedTeacher.user.email}</p>
+                <p><strong>Hire Date:</strong> {selectedTeacher.hire_date || "—"}</p>
+                {/* Add course offerings view, move section, etc. later */}
+            </div>
+            )}
+        </div>
         )}
         {activeTab === "departments" && (
           <p className="text-gray-500">

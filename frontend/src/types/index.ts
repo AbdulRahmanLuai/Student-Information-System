@@ -62,8 +62,8 @@ export interface Student {
   last_name: string;
   email: string;
   enrollment_date: string | null;
-  section_id: number;
   status: StudentStatus;
+  section: Section | null;  // not section_id
 }
 
 export interface CourseOffering {
@@ -119,4 +119,17 @@ export interface EnrollmentStatus {
 }
 
 
+export interface User {
+  id: number;
+  first_name: string;
+  last_name: string;
+  email: string;
+  role: string;
+}
 
+export interface Teacher {
+  id: number;
+  hire_date: string | null;
+  department_id: number | null;
+  user: User;
+}

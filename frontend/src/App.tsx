@@ -6,18 +6,11 @@ import { ProtectedRoute } from "./components/ProtectedRoute";
 import Login from "./pages/Login";
 import TeacherDashboard from "./pages/teacher/TeacherDashboard";
 import CourseOfferingDetails from "./pages/teacher/CourseOfferingDetails";
-
-// Both versions
-// import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminDashboard from "./pages/admin/AdminDashboard";
-
 import AcademicYearSections from "./pages/admin/AcademicYearSections";
 import AcademicYearSectionDetail from "./pages/admin/AcademicYearSectionDetail";
 import SectionStudents from "./pages/admin/SectionStudents";
 import SectionCourseOfferings from "./pages/admin/SectionCourseOfferings";
-
-// 🔥 Toggle here
-const useRF = true;
 
 const RootRedirect = () => {
   const { isAuthenticated, role, isLoading } = useAuth();
@@ -56,11 +49,10 @@ function App() {
             path="/admin/dashboard"
             element={
               <ProtectedRoute allowedRole="admin">
-                {useRF ? <AdminDashboard /> : <AdminDashboard />}
+                <AdminDashboard />
               </ProtectedRoute>
             }
           />
-
           <Route
             path="/admin/academic-year/sections"
             element={
@@ -77,8 +69,6 @@ function App() {
               </ProtectedRoute>
             }
           />
-
-          {/* Combined Section Student/Course Routes */}
           <Route
             path="/admin/sections/:sectionId/students"
             element={

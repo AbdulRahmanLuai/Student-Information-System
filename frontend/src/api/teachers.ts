@@ -7,3 +7,11 @@ export const getTeachers = async (departmentId?: number): Promise<Teacher[]> => 
   });
   return response.data;
 };
+
+
+export const searchTeachers = async (query: string): Promise<Teacher[]> => {
+  const response = await client.get("/admin/teachers/search", {
+    params: { query },
+  });
+  return response.data;
+};

@@ -92,6 +92,7 @@ const AdminDashboard = () => {
           setAddSectionError("");
         }}
         currentSemesterExists={!!currentSemester}
+        onStudentSelect={(student) => console.log("Selected student:", student)}
       />
 
       <SemestersList semesters={semesters} loading={loading} />

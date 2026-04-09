@@ -1,5 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlmodel import Session, select
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Path
+from sqlmodel import Session, select, String
+from sqlalchemy import cast, func
+from sqlalchemy.orm import joinedload
 from typing import List, Optional
 from ... import schemas
 from ...database import get_db
@@ -7,6 +9,37 @@ from ...models import Student, Section, Semester, SemesterStatus, StudentStatus
 from .dependencies import require_admin
 
 router = APIRouter()
+
+
+from sqlalchemy import select, or_, cast, String
+from sqlalchemy.orm import joinedload, contains_eager
+
+@router.get('/students/search', response_model=List[schemas.StudentOut])
+def search(
+    db: Session = Depends(get_db), 
+    id_prefix: Optional[str] = Query(None), 
+    query: Optional[str] = Query(None),
+    limit: int = Query(10, le=100)
+):
+    stmt = select(Student).options(joinedload(Student.section))
+    
+    if id_prefix:
+        stmt = stmt.where(cast(Student.id, String).startswith(id_prefix))
+        
+    elif query:
+        stmt = stmt.where(
+            or_(
+                Student.first_name.ilike(f"{query}%"),
+                Student.last_name.ilike(f"{query}%")
+            )
+        )
+    else:
+        raise HTTPException(400, "Provide an id or name")
+
+    stmt = stmt.order_by(Student.id).limit(limit)
+    
+    results = db.execute(stmt).scalars().all()
+    return results
 
 @router.post('/students', response_model=schemas.StudentOut, status_code=status.HTTP_201_CREATED)
 def create_student(student_data: schemas.StudentCreate, db: Session = Depends(get_db),
@@ -16,7 +49,7 @@ def create_student(student_data: schemas.StudentCreate, db: Session = Depends(ge
     if not section:
         raise HTTPException(status_code=404, detail=f"section with id {student_data.section_id} not found")
 
-    existing_student = db.exec(select(Student).where(Student.email == student_data.email)).scalars().first()
+    existing_student = db.execute(select(Student).where(Student.email == student_data.email)).scalars().first()
     if existing_student:
         raise HTTPException(status_code=400, detail=f"email {student_data.email} is already registered")
     
@@ -36,7 +69,9 @@ def create_student(student_data: schemas.StudentCreate, db: Session = Depends(ge
     )
     db.add(new_student)
     db.commit()
+
     db.refresh(new_student)
+    db.execute(select(Student).options(joinedload(Student.section)).where(Student.id == new_student.id)).scalars().first()
 
     return new_student
 
@@ -49,21 +84,25 @@ def get_students(section_id: int, db: Session = Depends(get_db),
     if not section:
         raise HTTPException(status_code=404, detail=f"section with id {section_id} not found")
 
-    stmt = select(Student).where(
+    stmt = select(Student).options(joinedload(Student.section)).where(
         Student.section_id == section_id,
         Student.status == StudentStatus.active
     )
 
     return db.execute(stmt).scalars().all()
 
+
 @router.get('/students/{student_id}', response_model=schemas.StudentOut)
 def get_student(student_id: int, db: Session = Depends(get_db), current_user=Depends(require_admin)):
 
-    student = db.get(Student, student_id)
+    student = db.execute(
+        select(Student).options(joinedload(Student.section)).where(Student.id == student_id)
+    ).scalars().first()
     if not student:
         raise HTTPException(status_code=404, detail=f"student with id {student_id} not found")
 
     return student
+
 
 from ...models import Enrollment, CourseOffering
 
@@ -97,7 +136,6 @@ def change_student_section(
         raise HTTPException(status_code=400, detail="Section not in current academic year")
 
     # 4. Delete current enrollments (ONLY current semester)
-    from sqlalchemy.orm import joinedload
 
     enrollments = db.exec(
         select(Enrollment)
@@ -110,7 +148,6 @@ def change_student_section(
 
     old_course_ids = {e.course_offering.course_id for e in enrollments if e.course_offering}
 
-        
     for e in enrollments:
         db.delete(e)
 
@@ -134,7 +171,7 @@ def change_student_section(
     for co in new_offerings:
         if co.course_id not in old_course_ids:
             continue
-
+        
         enrollment = Enrollment(
             student_id=student.id,
             course_offering_id=co.id,
@@ -143,6 +180,9 @@ def change_student_section(
         db.add(enrollment)
 
     db.commit()
-    db.refresh(student)
+
+    student = db.execute(
+        select(Student).options(joinedload(Student.section)).where(Student.id == student_id)
+    ).scalars().first()
 
     return student
