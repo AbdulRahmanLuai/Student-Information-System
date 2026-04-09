@@ -49,3 +49,12 @@ export const updateCourseOfferingTeacher = async (
   });
   return response.data;
 };
+
+export const getCourseOfferingsForTeacher = async (
+  teacherId: number
+): Promise<CourseOffering[]> => {
+  const response = await client.get("/admin/course-offerings", {
+    params: { teacher_id: teacherId },
+  });
+  return response.data;
+};

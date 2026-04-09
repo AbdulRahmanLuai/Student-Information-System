@@ -133,3 +133,20 @@ export interface Teacher {
   department_id: number | null;
   user: User;
 }
+
+export interface CourseOffering {
+  id: number;
+  course: Course;
+  section: Section;
+  semester: Semester;
+  teacher: Teacher;
+}
+
+export interface Enrollment {
+  id: number;
+  final_mark: string | null;
+  status: string;
+  student: StudentBasic;  
+  course_offering: CourseOffering;
+}
+

@@ -40,7 +40,7 @@ const TeacherDashboard = () => {
           >
             <h2 className="font-semibold text-lg">{co.course.name}</h2>
             <p className="text-gray-600">
-              Section: {co.section.grade}{co.section.name}
+              {co.section.grade}{co.section.name}
             </p>
             <p className="text-gray-600">
               Semester: {co.semester.academic_year_start}/{co.semester.academic_year_end} — Sem {co.semester.number}

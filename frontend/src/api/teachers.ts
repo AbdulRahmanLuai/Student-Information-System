@@ -10,8 +10,12 @@ export const getTeachers = async (departmentId?: number): Promise<Teacher[]> => 
 
 
 export const searchTeachers = async (query: string): Promise<Teacher[]> => {
-  const response = await client.get("/admin/teachers/search", {
-    params: { query },
-  });
+  const trimmed = query.trim();
+  const isNumeric = /^\d+$/.test(trimmed);
+  const params: any = isNumeric
+    ? { id_prefix: trimmed }
+    : { query: trimmed };
+  
+  const response = await client.get("/admin/teachers/search", { params });
   return response.data;
 };

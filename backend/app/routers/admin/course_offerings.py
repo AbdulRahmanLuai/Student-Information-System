@@ -4,7 +4,7 @@ from sqlalchemy.orm import joinedload
 from typing import List, Optional
 from ... import schemas
 from ...database import get_db
-from ...models import Course, Section, Semester, SemesterStatus, Teacher, CourseOffering
+from ...models import Course, Section, Semester, SemesterStatus, Teacher, CourseOffering, Enrollment
 from .dependencies import require_admin
 
 router = APIRouter()
@@ -177,3 +177,30 @@ def update_course_offering_teacher(
     updated = db.execute(stmt).scalars().first()
 
     return updated
+
+from sqlalchemy.orm import joinedload
+from sqlalchemy import select
+from fastapi import HTTPException
+
+@router.get("/course-offerings/{course_offering_id}/enrollments", response_model=list[schemas.EnrollmentOut])
+def get_course_offering_enrollments(
+    course_offering_id: int,
+    db: Session = Depends(get_db),
+    current_user=Depends(require_admin)
+):
+    # Verify the course offering exists
+    course_offering = db.execute(
+        select(CourseOffering).where(CourseOffering.id == course_offering_id)
+    ).scalars().first()
+    if not course_offering:
+        raise HTTPException(status_code=404, detail="Course offering not found")
+    
+    # Fetch enrollments with student data
+    stmt = (
+        select(Enrollment)
+        .options(joinedload(Enrollment.student))
+        .where(Enrollment.course_offering_id == course_offering_id)
+    )
+    enrollments = db.execute(stmt).scalars().unique().all()
+    
+    return enrollments

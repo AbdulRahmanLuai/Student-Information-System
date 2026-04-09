@@ -64,11 +64,13 @@ const StudentCard = ({ student: s, sections, onMoveSection, onViewProfile }: Stu
               className="border px-2 py-1 rounded text-sm"
             >
               <option value="">Move to...</option>
-              {sections.map((sec) => (
-                <option key={sec.id} value={sec.id}>
-                  {sec.name}
-                </option>
-              ))}
+              {sections
+                .filter(sec => sec.id !== s.section?.id)  // ← filter out current section
+                .map((sec) => (
+                  <option key={sec.id} value={sec.id}>
+                    {sec.name}
+                  </option>
+                ))}
             </select>
             <button
               onClick={() => onViewProfile(s.id)}

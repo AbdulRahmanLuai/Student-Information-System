@@ -24,7 +24,7 @@ function SearchBar<T>({
 
   useEffect(() => {
     const fetchData = async () => {
-      if (query.trim().length < 2) {
+      if (query.trim().length < 1) {
         setSuggestions([]);
         setIsOpen(false);
         return;

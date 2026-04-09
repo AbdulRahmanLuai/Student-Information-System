@@ -284,23 +284,20 @@ def create_course_offerings(db: Session, setup: AcademicYearSetup, setup_section
         ))
         
         
-def check_valid_enrollment_state(db: Session):
+def check_valid_enrollment_state(db: Session): # TODO: More efficient solution to check valid state?
     active_setup = db.exec(
         select(AcademicYearSetup).where(AcademicYearSetup.status == "draft")
     ).first()
     if active_setup:
-        print(f"active setup: {active_setup}")
         return False, None
 
     current_semester = db.exec(
         select(Semester).where(Semester.status == SemesterStatus.current)
     ).first()
     if not current_semester:
-        print(f"this1")
         return False, None
 
     if current_semester.number != 1:
-        print("this2")
         return False, None
 
     completed_setup = db.exec(
@@ -310,7 +307,6 @@ def check_valid_enrollment_state(db: Session):
         )
     ).first()
     if not completed_setup:
-        print("this3")
         return False, None
 
     # 5. No enrollments should exist yet for this semester
@@ -326,7 +322,6 @@ def check_valid_enrollment_state(db: Session):
         )
     ).first()
     if existing_enrollment:
-        print("this4")
         return False, None
 
     return True, current_semester
