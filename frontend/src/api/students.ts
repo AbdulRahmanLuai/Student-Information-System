@@ -19,3 +19,14 @@ export const getStudentById = async (id: number): Promise<Student> => {
   const response = await client.get(`/admin/students/${id}`);
   return response.data;
 };
+
+export const createStudent = async (studentData: {
+  first_name: string;
+  last_name: string;
+  email: string;
+  enrollment_date?: string | null;
+  section_id: number;
+}): Promise<Student> => {
+  const response = await client.post("/admin/students", studentData);
+  return response.data;
+};

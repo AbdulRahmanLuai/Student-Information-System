@@ -24,3 +24,20 @@ export const getTeacherById = async (id: number): Promise<Teacher> => {
   const response = await client.get(`/admin/teachers/${id}`);
   return response.data;
 };
+
+export const createTeacher = async (teacherData: {
+  first_name: string;
+  last_name: string;
+  email: string;
+  hire_date?: string | null;
+  department_id: number;
+}): Promise<{ plain_password: string }> => {
+  const payload = {
+    user: {
+      ...teacherData,
+      role: "teacher",
+    },
+  };
+  const response = await client.post("/admin/users", payload);
+  return response.data;
+};

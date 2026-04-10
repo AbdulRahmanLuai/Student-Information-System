@@ -47,7 +47,7 @@ const StudentCard = ({ student: s, sections, onMoveSection }: StudentCardProps) 
           </span>
         </td>
         <td className="px-4 py-2 border-b text-sm text-gray-600">
-          {s.section ? `${s.section.name} (Grade ${s.section.grade})` : "—"}
+          {s.section ? `${s.section.grade}${s.section.name}` : "—"}
         </td>
         <td className="px-4 py-2 border-b">
           <div className="flex gap-2 items-center">

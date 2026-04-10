@@ -46,7 +46,7 @@ const StudentProfile = () => {
               <p><strong>Email:</strong> {student.email}</p>
               <p><strong>Status:</strong> {student.status}</p>
               <p><strong>Enrollment Date:</strong> {student.enrollment_date || "—"}</p>
-              <p><strong>Section:</strong> {student.section ? `${student.section.name} (Grade ${student.section.grade})` : "—"}</p>
+              <p><strong>Section:</strong> {student.section ? `${student.section.grade}${student.section.name}` : "—"}</p>
             </div>
             {/* Add more tabs/sections later: enrollments, marks, etc. */}
           </>
