@@ -5,7 +5,7 @@ from sqlalchemy.orm import joinedload
 from typing import List, Optional
 from ... import schemas
 from ...database import get_db
-from ...models import Student, Section, Semester, SemesterStatus, StudentStatus
+from ...models import CourseOffering, Student, Section, Semester, SemesterStatus, StudentStatus
 from .dependencies import require_admin
 
 router = APIRouter()
@@ -47,18 +47,18 @@ def create_student(student_data: schemas.StudentCreate, db: Session = Depends(ge
 
     section = db.get(Section, student_data.section_id)
     if not section:
-        raise HTTPException(status_code=404, detail=f"section with id {student_data.section_id} not found")
+        raise HTTPException(404, f"section {student_data.section_id} not found")
 
-    existing_student = db.execute(select(Student).where(Student.email == student_data.email)).scalars().first()
-    if existing_student:
-        raise HTTPException(status_code=400, detail=f"email {student_data.email} is already registered")
+    existing = db.execute(select(Student).where(Student.email == student_data.email)).scalar_one_or_none()
+    if existing:
+        raise HTTPException(400, f"email {student_data.email} already registered")
     
-    current_semester = db.execute(select(Semester).where(Semester.status == SemesterStatus.current)).scalars().first()
+    current_semester = db.execute(select(Semester).where(Semester.status == SemesterStatus.current)).scalar_one_or_none()
     if not current_semester:
-        raise HTTPException(status_code=400, detail="no current semester set")
+        raise HTTPException(400, "no current semester set")
 
     if section.academic_year_start != current_semester.academic_year_start:
-        raise HTTPException(status_code=400, detail=f"section does not belong to the current academic year ({current_semester.academic_year_start})")
+        raise HTTPException(400, f"section not in current academic year ({current_semester.academic_year_start})")
 
     new_student = Student(
         first_name=student_data.first_name,
@@ -68,12 +68,27 @@ def create_student(student_data: schemas.StudentCreate, db: Session = Depends(ge
         section_id=student_data.section_id
     )
     db.add(new_student)
+
+    # Create enrollments for current semester offerings in this section
+    offerings = db.execute(
+        select(CourseOffering).where(
+            CourseOffering.section_id == student_data.section_id,
+            CourseOffering.semester_id == current_semester.id
+        )
+    ).scalars().all()
+    
+    for off in offerings:
+        db.add(Enrollment(student_id=new_student.id, course_offering_id=off.id, status="active"))
+        
     db.commit()
-
     db.refresh(new_student)
-    db.execute(select(Student).options(joinedload(Student.section)).where(Student.id == new_student.id)).scalars().first()
 
-    return new_student
+    # Reload with section relationship for response
+    result = db.execute(
+        select(Student).options(joinedload(Student.section)).where(Student.id == new_student.id)
+    ).scalar_one()
+
+    return result
 
 
 @router.get('/students', response_model=List[schemas.StudentOut])
