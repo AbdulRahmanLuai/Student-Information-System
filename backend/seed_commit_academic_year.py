@@ -37,9 +37,13 @@ async def prepare_for_commit():
             # 1. Bulk Update Marks
             with engine.connect() as conn:
                 conn.execute(text("""
-                    UPDATE enrollments SET final_mark = 99, status = 'completed'
-                    FROM course_offerings JOIN semesters ON semesters.id = course_offerings.semester_id
-                    WHERE enrollments.course_offering_id = course_offerings.id AND semesters.status = 'current';
+                    UPDATE enrollments SET 
+                        final_mark = floor(random() * 101)::int, 
+                        status = 'completed'
+                    FROM course_offerings 
+                    JOIN semesters ON semesters.id = course_offerings.semester_id
+                    WHERE enrollments.course_offering_id = course_offerings.id 
+                    AND semesters.status = 'current';
                 """))
                 conn.commit()
             print("  ✅ Database: All current enrollments set to 99.")

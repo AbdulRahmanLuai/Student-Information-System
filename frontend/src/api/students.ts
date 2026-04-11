@@ -1,5 +1,5 @@
 import client from "./client";
-import { Student } from "../types";
+import { Student, Enrollment } from "../types";
 
 export const changeStudentSection = async (studentId: number, sectionId: number) => {
   const res = await client.patch(`/admin/students/${studentId}/section`, {
@@ -28,5 +28,17 @@ export const createStudent = async (studentData: {
   section_id: number;
 }): Promise<Student> => {
   const response = await client.post("/admin/students", studentData);
+  return response.data;
+};
+
+export const getStudentEnrollments = async (
+  studentId: number,
+  academicYearStart?: number,
+  semesterNumber?: number
+): Promise<Enrollment[]> => {
+  const params: any = {};
+  if (academicYearStart !== undefined) params.academic_year_start = academicYearStart;
+  if (semesterNumber !== undefined) params.semester_number = semesterNumber;
+  const response = await client.get(`/admin/students/${studentId}/enrollments`, { params });
   return response.data;
 };

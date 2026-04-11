@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Path
-from sqlmodel import Session, select, String
+from sqlmodel import Session, and_, select, String
 from sqlalchemy import cast, func
 from sqlalchemy.orm import joinedload
 from typing import List, Optional
@@ -186,3 +186,30 @@ def change_student_section(
     ).scalars().first()
 
     return student
+
+
+@router.get('/students/{student_id}/enrollments', response_model=List[schemas.EnrollmentOut])
+def get_student_enrollments(student_id: int, academic_year_start: Optional[int]=None, semester_number: Optional[int] = None, db: Session = Depends(get_db), current_user=Depends(require_admin)):
+    student = db.get(Student, student_id)
+    if not student:
+        raise HTTPException(status_code=404, detail=f"student with id {student_id} not found")
+
+    stmt = select(Enrollment).options(
+        joinedload(Enrollment.course_offering).joinedload(CourseOffering.course),
+        joinedload(Enrollment.course_offering).joinedload(CourseOffering.section),
+        joinedload(Enrollment.course_offering).joinedload(CourseOffering.semester),
+        joinedload(Enrollment.course_offering).joinedload(CourseOffering.teacher)
+    ).where(
+        Enrollment.student_id == student_id,
+        CourseOffering.semester.has(
+            and_(
+                *[Semester.academic_year_start == academic_year_start if academic_year_start else True,
+                Semester.number == semester_number if semester_number else True])
+            
+        )
+    )
+
+    result = db.execute(stmt).scalars().all()
+    return result
+
+
