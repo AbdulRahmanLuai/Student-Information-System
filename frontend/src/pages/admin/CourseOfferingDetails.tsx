@@ -44,7 +44,12 @@ const CourseOfferingDetails = () => {
             </h1>
             <div className="space-y-2">
               <p><strong>Section:</strong> {offering.section.name} (Grade {offering.section.grade})</p>
-              <p><strong>Teacher:</strong> {offering.teacher.user.first_name} {offering.teacher.user.last_name}</p>
+              <p>
+                <strong>Teacher:</strong>{" "}
+                {offering.teacher
+                  ? `${offering.teacher.user.first_name} ${offering.teacher.user.last_name}`
+                  : "Not assigned"}
+              </p>
               <p><strong>Department:</strong> {offering.course.department.name}</p>
               <p><strong>Semester:</strong> Year {offering.semester.academic_year_start}-{offering.semester.academic_year_end}, Sem {offering.semester.number}</p>
             </div>

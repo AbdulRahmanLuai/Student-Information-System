@@ -24,6 +24,7 @@ export interface Section {
   grade: number;
   name: string;
   academic_year_start: number;
+  has_unassigned_course_offerings?: boolean;
 }
 
 export interface Semester {

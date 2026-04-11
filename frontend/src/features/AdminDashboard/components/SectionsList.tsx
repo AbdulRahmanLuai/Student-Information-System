@@ -25,6 +25,7 @@ const SectionsList = ({ sections, onAddSection, onDeleteSection, isLastSectionOf
             <tr>
               <th className="px-4 py-2 border-b">Section</th>
               <th className="px-4 py-2 border-b">Academic Year</th>
+              <th className="px-4 py-2 border-b">Status</th>
               <th className="px-4 py-2 border-b">Actions</th>
             </tr>
           </thead>
@@ -33,6 +34,11 @@ const SectionsList = ({ sections, onAddSection, onDeleteSection, isLastSectionOf
               <tr key={section.id} className="hover:bg-gray-50">
                 <td className="px-4 py-2 border-b">{section.grade}{section.name}</td>
                 <td className="px-4 py-2 border-b">{section.academic_year_start} - {section.academic_year_start + 1}</td>
+                <td className="px-4 py-2 border-b">
+                  {section.has_unassigned_course_offerings && (
+                    <span className="text-red-600 text-sm font-medium">⚠️ Missing teacher assignments</span>
+                  )}
+                </td>
                 <td className="px-4 py-2 border-b">
                   <div className="flex gap-2">
                     <Link

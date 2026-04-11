@@ -37,7 +37,7 @@ const CourseOfferingCard = ({
   const handleEditClick = async (co: CourseOffering) => {
     if (!fetchTeachers) return;
     setEditingOffering(co);
-    setSelectedTeacherId(co.teacher.id);
+    setSelectedTeacherId(co.teacher?.id ?? null);  // handle null teacher
     setError("");
     setLoadingTeachers(true);
 
@@ -108,7 +108,7 @@ const CourseOfferingCard = ({
                 <td className="px-4 py-2 border-b font-medium">{co.course.name}</td>
                 <td className="px-4 py-2 border-b text-sm text-gray-600">{co.course.code}</td>
                 <td className="px-4 py-2 border-b text-sm text-gray-600">
-                  {co.teacher.user.first_name} {co.teacher.user.last_name}
+                  {co.teacher ? `${co.teacher.user.first_name} ${co.teacher.user.last_name}` : "Not assigned"}
                 </td>
                 <td className="px-4 py-2 border-b text-sm text-gray-600">
                   {co.course.department.name}
@@ -196,8 +196,7 @@ const CourseOfferingCard = ({
             </h2>
             <p className="text-sm text-gray-500 mb-4">
               Section: {enrollmentsOffering.section.grade}{enrollmentsOffering.section.name}<br />
-              Teacher: {enrollmentsOffering.teacher.user.first_name} {enrollmentsOffering.teacher.user.last_name}
-            </p>
+              Teacher: {enrollmentsOffering.teacher ? `${enrollmentsOffering.teacher.user.first_name} ${enrollmentsOffering.teacher.user.last_name}` : "Not assigned"}            </p>
 
             {loadingEnrollments ? (
               <p className="text-gray-500">Loading enrollments...</p>

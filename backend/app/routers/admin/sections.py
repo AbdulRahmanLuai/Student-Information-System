@@ -1,31 +1,95 @@
 from fastapi import APIRouter, Depends, status, HTTPException
 from sqlmodel import Session, select, func
+from sqlalchemy import exists
 from typing import List
 from ... import schemas
 from ...database import get_db
-from ...models import Section, Student, CourseOffering, Semester, SemesterStatus
+from ...models import Section, Student, CourseOffering, Semester, SemesterStatus, Course, CourseStatus
 from .dependencies import require_admin
 
 router = APIRouter()
 
-@router.post('/sections', response_model=schemas.SectionOut, status_code=status.HTTP_201_CREATED)
-def create_section(section_data: schemas.SectionCreate, db: Session = Depends(get_db),
-                   current_user=Depends(require_admin)):
-
-    new_section = Section(grade=section_data.grade, name=section_data.name, academic_year_start=section_data.academic_year_start)
+@router.post("/sections", response_model=schemas.SectionOut)
+def create_section(
+    section_data: schemas.SectionCreate,
+    db: Session = Depends(get_db),
+    current_user=Depends(require_admin)
+):
+    # 1. Create the section
+    new_section = Section(
+        grade=section_data.grade,
+        name=section_data.name,
+        academic_year_start=section_data.academic_year_start
+    )
     db.add(new_section)
+    db.flush()  # get ID without commit
+
+    # 2. Find current semester
+    current_semester = db.execute(
+        select(Semester).where(Semester.status == SemesterStatus.current)
+    ).scalar_one_or_none()
+
+    if current_semester:
+        # 3. Find active courses for the same grade
+        courses = db.execute(
+            select(Course).where(
+                Course.grade == section_data.grade,
+                Course.status == CourseStatus.active
+            )
+        ).scalars().all()
+
+        # 4. Create course offerings (teacher = NULL)
+        for course in courses:
+            offering = CourseOffering(
+                course_id=course.id,
+                section_id=new_section.id,
+                semester_id=current_semester.id,
+                teacher_id=None
+            )
+            db.add(offering)
+
     db.commit()
     db.refresh(new_section)
-
+    
     return new_section
 
-
 @router.get('/sections', response_model=List[schemas.SectionOut])
-def get_sections(academic_year_start: int, db: Session = Depends(get_db), current_user=Depends(require_admin)):
-
-    sections = db.execute(select(Section).where(Section.academic_year_start==academic_year_start)).scalars().all()
-
-    return sections
+def get_sections(
+    academic_year_start: int,
+    db: Session = Depends(get_db),
+    current_user=Depends(require_admin)
+):
+    # Assume current semester exists (dashboard enforces this)
+    current_semester = db.execute(
+        select(Semester).where(Semester.status == SemesterStatus.current)
+    ).scalar_one()
+    
+    # Subquery: check if any unassigned course offering exists for this section in current semester
+    unassigned_exists = exists().where(
+        CourseOffering.section_id == Section.id,
+        CourseOffering.semester_id == current_semester.id,
+        CourseOffering.teacher_id.is_(None)
+    ).correlate(Section).label("has_unassigned")
+    
+    stmt = (
+        select(Section, unassigned_exists)
+        .where(Section.academic_year_start == academic_year_start)
+    )
+    
+    results = db.execute(stmt).all()
+    sections_out = []
+    for section, has_unassigned in results:
+        sections_out.append(
+            schemas.SectionOut(
+                id=section.id,
+                grade=section.grade,
+                name=section.name,
+                academic_year_start=section.academic_year_start,
+                has_unassigned_course_offerings=has_unassigned
+            )
+        )
+    
+    return sections_out
 
 @router.get('/sections/{section_id}', response_model=schemas.SectionOut)
 def get_section(section_id: int, db: Session = Depends(get_db), current_user=Depends(require_admin)):

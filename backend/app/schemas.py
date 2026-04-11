@@ -131,6 +131,7 @@ class SectionOut(BaseModel):
     grade: int
     name: str
     academic_year_start: int
+    has_unassigned_course_offerings: bool = False
 
     class Config:
         from_attributes = True
@@ -199,14 +200,14 @@ class CourseOfferingCreate(BaseModel):
     course_id: int
     section_id: int
     semester_id: int
-    teacher_id: int
+    teacher_id: Optional[int] = None
 
 class CourseOfferingOut(BaseModel):
     id: int
     course: CourseOut
     section: SectionOut
     semester: SemesterOut
-    teacher: TeacherOut
+    teacher: Optional[TeacherOut] = None
 
     class Config:
         from_attributes = True
