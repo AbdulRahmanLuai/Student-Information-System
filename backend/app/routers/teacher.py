@@ -249,8 +249,33 @@ def commit_marks(
     
     
     
-    
-    
-    
+@router.get("/{course_offering_id}", response_model=schemas.CourseOfferingOut)
+def get_course_offering_by_id(
+    course_offering_id: int,
+    db: Session = Depends(get_db),
+    current_user=Depends(oauth2.get_current_user)
+):
+    teacher = get_teacher_from_user(current_user.id, db)
+
+    stmt = (
+        select(CourseOffering)
+        .options(
+            joinedload(CourseOffering.course).joinedload(Course.department),
+            joinedload(CourseOffering.section),
+            joinedload(CourseOffering.semester),
+            joinedload(CourseOffering.teacher).joinedload(Teacher.user)
+        )
+        .where(
+            CourseOffering.id == course_offering_id,
+            CourseOffering.teacher_id == teacher.id
+        )
+    )
+
+    course_offering = db.execute(stmt).scalars().first()
+
+    if not course_offering:
+        raise HTTPException(status_code=404, detail="Course offering not found")
+
+    return course_offering
     
     

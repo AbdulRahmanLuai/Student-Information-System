@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import TeacherLayout from "../../components/TeacherLayout";
-import { getEnrollments, enterMark, commitMarks } from "../../api/courseOfferings";
-import { Enrollment } from "../../types";
-
+import CommitWarningModal from "./components/CommitWarningModal"
+import { getEnrollments, enterMark, commitMarks, getCourseOfferingById } from "../../api/teacher/courseOfferings";
+import { Enrollment, CourseOffering } from "../../types";
 const TeacherCourseOfferingDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -11,12 +11,17 @@ const TeacherCourseOfferingDetails = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [committing, setCommitting] = useState(false);
+  const [ShowCommitWarning, setShowCommitWarning] = useState(false);
 
   useEffect(() => {
     const fetch = async () => {
       try {
-        const data = await getEnrollments(Number(id));
-        setEnrollments(data);
+        const [enrollmentData, offeringData] = await Promise.all([
+          getEnrollments(Number(id)),
+          getCourseOfferingById(Number(id)),
+        ]);
+        setEnrollments(enrollmentData);
+        setCourseOffering(offeringData);
       } catch (err: any) {
         setError(err.response?.data?.detail || "Failed to fetch enrollments");
       } finally {
@@ -27,6 +32,8 @@ const TeacherCourseOfferingDetails = () => {
     fetch();
   }, [id]);
 
+
+  const [courseOffering, setCourseOffering] = useState<CourseOffering | null>(null);
   const handleMarkChange = async (enrollmentId: number, value: string) => {
     const mark = Number(value);
 
@@ -47,6 +54,7 @@ const TeacherCourseOfferingDetails = () => {
 
   const handleCommit = async () => {
     setCommitting(true);
+    setShowCommitWarning(false);
     try {
       const updated = await commitMarks(Number(id));
       setEnrollments(updated);
@@ -68,10 +76,22 @@ const TeacherCourseOfferingDetails = () => {
         ← Back to Dashboard
       </button>
 
-      <h1 className="text-2xl font-bold mb-6">Enrollments</h1>
+      <h1 className="text-2xl font-bold mb-6">
+    {courseOffering
+      ? `${courseOffering.course.name} (${courseOffering.course.code}) — Grade ${courseOffering.section.grade}${courseOffering.section.name}`
+      : "Enrollments"}
+  </h1>
+
+      <CommitWarningModal
+        show={ShowCommitWarning}
+        committing={committing}
+        error={error}
+        onCancel={() => setShowCommitWarning(false)}
+        onConfirm={handleCommit}
+      />
 
       <button
-        onClick={handleCommit}
+        onClick={() => setShowCommitWarning(true)}
         disabled={committing || allCompleted}
         className="mb-6 bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 disabled:bg-gray-400"
       >
