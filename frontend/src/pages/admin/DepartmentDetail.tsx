@@ -20,7 +20,6 @@ const DepartmentDetail = () => {
   const [academicYears, setAcademicYears] = useState<number[]>([]);
   const [currentAcademicYear, setCurrentAcademicYear] = useState<number>(new Date().getFullYear());
   const [currentSemesterNumber, setCurrentSemesterNumber] = useState<number>(1);
-  const [loadingMetadata, setLoadingMetadata] = useState(true);
 
   useEffect(() => {
     const fetchDepartment = async () => {
@@ -52,7 +51,6 @@ const DepartmentDetail = () => {
       } catch (err) {
         console.error("Failed to load metadata", err);
       } finally {
-        setLoadingMetadata(false);
       }
     };
     fetchMetadata();

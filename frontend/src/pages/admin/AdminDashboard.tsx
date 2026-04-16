@@ -47,7 +47,6 @@ const AdminDashboard = () => {
     handleAdvanceSemester,
     handleMigrate,
     handleEnrollAll,
-    navigate,
   } = useAdminDashboard();
 
   const [academicYears, setAcademicYears] = useState<number[]>([]);

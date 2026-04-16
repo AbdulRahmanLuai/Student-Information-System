@@ -9,7 +9,6 @@ import DepartmentsList from "./DepartmentsList";
 import { changeStudentSection, createStudent } from "../../../api/students";
 import { getSectionsByYear } from "../../../api/sections";
 import { createTeacher } from "../../../api/teachers";
-import { getDepartments } from "../../../api/departments";
 
 interface AdminPortalTabsProps {
   activeTab: "students" | "teachers" | "sections" | "departments";

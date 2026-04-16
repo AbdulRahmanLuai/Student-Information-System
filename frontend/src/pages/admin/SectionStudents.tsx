@@ -15,7 +15,6 @@ const SectionStudents = ({ academicYearStart }: SectionStudentsProps) => {
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [sectionName, setSectionName] = useState("");
   const [sections, setSections] = useState<Section[]>([]);
 
   const handleMoveSection = async (studentId: number, newSectionId: number) => {
@@ -39,7 +38,6 @@ const SectionStudents = ({ academicYearStart }: SectionStudentsProps) => {
         const id = Number(sectionId);
         const section = await getSectionById(id);
 
-        setSectionName(`Grade ${section.grade} - ${section.name}`);
 
         const [studentsRes, allSections] = await Promise.all([
           client.get("/admin/students", { params: { section_id: id, academic_year_start: academicYearStart } }),
