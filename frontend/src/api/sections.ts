@@ -3,12 +3,12 @@ import { Section } from "../types";
 
 
 
-export const getSections = async (academicYearStart: number): Promise<Section[]> => {
-  const response = await client.get("/admin/sections", {
-    params: { academic_year_start: academicYearStart },
-  });
-  return response.data;
-};
+// export const getSections = async (academicYearStart: number): Promise<Section[]> => {
+//   const response = await client.get("/admin/sections", {
+//     params: { academic_year_start: academicYearStart },
+//   });
+//   return response.data;
+// };
 
 export const createSection = async (payload: {
   grade: number;
@@ -25,5 +25,15 @@ export const deleteSection = async (sectionId: number): Promise<void> => {
 
 export const getSectionById = async (sectionId: number): Promise<Section> => {
   const response = await client.get(`/admin/sections/${sectionId}`);
+  return response.data;
+};
+
+export const getSectionsByYear = async (academicYearStart: number): Promise<Section[]> => {
+  const response = await client.get("/admin/sections", { params: { academic_year_start: academicYearStart } });
+  return response.data;
+};
+
+export const getAcademicYears = async (): Promise<number[]> => {
+  const response = await client.get("/admin/sections/academic-years");
   return response.data;
 };

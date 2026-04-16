@@ -11,7 +11,7 @@ import {
   getEnrollmentStatus,
 } from "../../../api/academicYear";
 import {
-  getSections,
+  getSectionsByYear,
   createSection,
   deleteSection,
 } from "../../../api/sections";
@@ -59,7 +59,7 @@ export const useAdminDashboard = () => {
 
         const current = semesterData.find((s) => s.status === "current");
         if (current) {
-          const sectionData = await getSections(current.academic_year_start);
+          const sectionData = await getSectionsByYear(current.academic_year_start);
           const sorted = sectionData.sort((a, b) =>
             a.grade !== b.grade ? a.grade - b.grade : a.name.localeCompare(b.name)
           );
@@ -137,7 +137,7 @@ export const useAdminDashboard = () => {
     try {
       await deleteSection(sectionToDelete.id);
       if (currentSemester) {
-        const sectionData = await getSections(currentSemester.academic_year_start);
+        const sectionData = await getSectionsByYear(currentSemester.academic_year_start);
         setSections(
           sectionData.sort((a, b) =>
             a.grade !== b.grade ? a.grade - b.grade : a.name.localeCompare(b.name)
@@ -184,7 +184,7 @@ export const useAdminDashboard = () => {
 
       const current = data.find((s) => s.status === "current");
       if (current) {
-        const sectionData = await getSections(current.academic_year_start);
+        const sectionData = await getSectionsByYear(current.academic_year_start);
         setSections(
           sectionData.sort((a, b) =>
             a.grade !== b.grade ? a.grade - b.grade : a.name.localeCompare(b.name)

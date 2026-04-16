@@ -9,6 +9,12 @@ from .dependencies import require_admin
 
 router = APIRouter()
 
+@router.get('/sections/academic-years', response_model=List[int])
+def get_academic_years(db: Session = Depends(get_db), current_user=Depends(require_admin)):
+    years = db.execute(select(Section.academic_year_start).distinct().order_by(Section.academic_year_start)).scalars().all()
+    print("Raw years:", years)  # Debug
+    return years  # Already a list of ints
+
 @router.post("/sections", response_model=schemas.SectionOut)
 def create_section(
     section_data: schemas.SectionCreate,
@@ -179,3 +185,5 @@ def delete_section(section_id: int, db: Session = Depends(get_db), current_user=
         db.rollback()
         print(e, "delete_section error")
         raise HTTPException(status_code=500, detail="Internal server error")
+    
+

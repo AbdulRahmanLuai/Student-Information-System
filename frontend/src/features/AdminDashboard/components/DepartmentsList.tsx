@@ -1,29 +1,14 @@
-import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Department } from "../../../types";
-import { getDepartments } from "../../../api/departments";
 
-const DepartmentsList = () => {
-  const [departments, setDepartments] = useState<Department[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+interface DepartmentsListProps {
+  departments: Department[];
+}
 
-  useEffect(() => {
-    const fetchDepartments = async () => {
-      try {
-        const data = await getDepartments();
-        setDepartments(data);
-      } catch (err: any) {
-        setError(err.response?.data?.detail || "Failed to load departments");
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchDepartments();
-  }, []);
-
-  if (loading) return <p className="text-gray-500">Loading departments...</p>;
-  if (error) return <p className="text-red-500">{error}</p>;
+const DepartmentsList = ({ departments }: DepartmentsListProps) => {
+  if (departments.length === 0) {
+    return <p className="text-gray-500">No departments found.</p>;
+  }
 
   return (
     <div className="overflow-x-auto">

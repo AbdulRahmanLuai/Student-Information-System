@@ -72,7 +72,7 @@ const SectionDetail = () => {
         </div>
       </div>
 
-      {activeTab === "students" && <SectionStudents />}
+      {activeTab === "students" && <SectionStudents academicYearStart={section.academic_year_start} />}
       {activeTab === "offerings" && <SectionCourseOfferings />}
     </AdminLayout>
   );

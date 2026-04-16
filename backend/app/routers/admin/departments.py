@@ -4,7 +4,7 @@ from sqlmodel import Session, select
 from typing import List
 from ... import schemas
 from ...database import get_db
-from ...models import Department
+from ...models import Department, Course, CourseStatus  
 from .dependencies import require_admin
 
 router = APIRouter()
@@ -41,3 +41,10 @@ def get_department(department_id: int, db: Session = Depends(get_db)):
         )
         
     return department
+
+@router.get('/departments/{department_id}/courses', response_model=List[schemas.CourseOut])
+def get_department_courses(department_id: int, db: Session = Depends(get_db)):
+    courses = db.execute(
+        select(Course).where(Course.department_id == department_id, Course.status == CourseStatus.active)
+    ).scalars().all()
+    return courses

@@ -3,10 +3,14 @@ import { useParams } from "react-router-dom";
 import StudentCard from "../../components/StudentCard";
 import client from "../../api/client";
 import { Student, Section } from "../../types";
-import { getSectionById, getSections } from "../../api/sections";
+import { getSectionById, getSectionsByYear } from "../../api/sections";
 import { changeStudentSection } from "../../api/students";
 
-const SectionStudents = () => {
+interface SectionStudentsProps {
+  academicYearStart: number;
+}
+
+const SectionStudents = ({ academicYearStart }: SectionStudentsProps) => {
   const { sectionId } = useParams();
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
@@ -18,7 +22,7 @@ const SectionStudents = () => {
     try {
       await changeStudentSection(studentId, newSectionId);
       const response = await client.get("/admin/students", {
-        params: { section_id: Number(sectionId) },
+        params: { section_id: Number(sectionId), academic_year_start: academicYearStart }
       });
       setStudents(response.data);
     } catch (err: any) {
@@ -38,8 +42,8 @@ const SectionStudents = () => {
         setSectionName(`Grade ${section.grade} - ${section.name}`);
 
         const [studentsRes, allSections] = await Promise.all([
-          client.get("/admin/students", { params: { section_id: id } }),
-          getSections(section.academic_year_start),
+          client.get("/admin/students", { params: { section_id: id, academic_year_start: academicYearStart } }),
+          getSectionsByYear(section.academic_year_start),
         ]);
 
         setStudents(studentsRes.data);

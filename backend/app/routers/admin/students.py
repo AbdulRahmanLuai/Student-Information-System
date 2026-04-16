@@ -92,19 +92,47 @@ def create_student(student_data: schemas.StudentCreate, db: Session = Depends(ge
 
 
 @router.get('/students', response_model=List[schemas.StudentOut])
-def get_students(section_id: int, db: Session = Depends(get_db),
-                 current_user=Depends(require_admin)):
+def get_students(
+    section_id: Optional[int] = None,
+    academic_year_start: Optional[int] = None,
+    db: Session = Depends(get_db),
+    current_user=Depends(require_admin)
+):
+    print(section_id, academic_year_start)
+    if section_id is None:
+        return []  # or all students, but we expect section_id
+    
+    # Get current year for optimization
+    current_semester = db.execute(
+        select(Semester).where(Semester.status == SemesterStatus.current)
+    ).scalar_one_or_none()
+    current_year = current_semester.academic_year_start if current_semester else None
 
-    section = db.get(Section, section_id)
-    if not section:
-        raise HTTPException(status_code=404, detail=f"section with id {section_id} not found")
+    # If no academic_year_start provided, assume current year
+    if academic_year_start is None:
+        academic_year_start = current_year
 
-    stmt = select(Student).options(joinedload(Student.section)).where(
-        Student.section_id == section_id,
-        Student.status == StudentStatus.active
-    )
-
-    return db.execute(stmt).scalars().all()
+    if academic_year_start == current_year:
+        # Current year: use direct section_id (fast)
+        stmt = select(Student).options(joinedload(Student.section)).where(Student.section_id == section_id)
+    else:
+        # Historical: use enrollments to find students who took any course offering in this section during that year
+        stmt = (
+            select(Student)
+            .options(joinedload(Student.section))
+            .join(Enrollment, Enrollment.student_id == Student.id)
+            .join(CourseOffering, CourseOffering.id == Enrollment.course_offering_id)
+            .join(Semester, Semester.id == CourseOffering.semester_id)
+            .where(
+                CourseOffering.section_id == section_id,
+                Semester.academic_year_start == academic_year_start
+            )
+            .distinct()
+        )
+        print(stmt)
+    
+    students = db.execute(stmt).scalars().all()
+    return students
 
 
 @router.get('/students/{student_id}', response_model=schemas.StudentOut)

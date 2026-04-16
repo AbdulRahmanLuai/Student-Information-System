@@ -219,5 +219,11 @@ def advance_semester(db: Session = Depends(get_db)):
     return new_semester
 
 
+@router.get("/semesters/current", response_model=schemas.SemesterOut)
+def get_current_semester(db: Session = Depends(get_db)):
+    semester = get_active_semester(db)
+    if not semester:
+        raise HTTPException(status_code=404, detail="No active semester found")
+    return semester
 
 

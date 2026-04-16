@@ -15,3 +15,9 @@ export const advanceSemester = async (): Promise<Semester> => {
   const response = await client.post("/admin/semesters/advance");
   return response.data;
 };
+
+
+export const getCurrentSemester = async (): Promise<Semester> => {
+  const response = await client.get("/admin/semesters/current");
+  return response.data;
+};

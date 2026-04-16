@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import AdminLayout from "../../components/AdminLayout";
 import { useAdminDashboard } from "../../features/AdminDashboard/hooks/useAdminDashboard";
 import CurrentSemesterCard from "../../features/AdminDashboard/components/CurrentSemesterCard";
@@ -7,6 +8,9 @@ import AdminPortalTabs from "../../features/AdminDashboard/components/AdminPorta
 import SemestersList from "../../features/AdminDashboard/components/SemestersList";
 import AddSectionModal from "../../features/AdminDashboard/components/AddSectionModal";
 import DeleteSectionModal from "../../features/AdminDashboard/components/DeleteSectionModal";
+import { getAcademicYears } from "../../api/sections";
+import { getDepartments } from "../../api/departments";
+import { Department } from "../../types";
 
 const AdminDashboard = () => {
   const {
@@ -45,6 +49,16 @@ const AdminDashboard = () => {
     handleEnrollAll,
     navigate,
   } = useAdminDashboard();
+
+  const [academicYears, setAcademicYears] = useState<number[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
+
+  useEffect(() => {
+    getAcademicYears().then(setAcademicYears).catch(console.error);
+    getDepartments().then(setDepartments).catch(console.error);
+  }, []);
+
+  const currentAcademicYear = currentSemester ? currentSemester.academic_year_start : null;
 
   return (
     <AdminLayout>
@@ -88,6 +102,9 @@ const AdminDashboard = () => {
         currentSemesterExists={!!currentSemester}
         onDeleteSection={setSectionToDelete}
         isLastSectionOfGrade={isLastSectionOfGrade}
+        academicYears={academicYears}
+        departments={departments}
+        currentAcademicYear={currentAcademicYear}
       />
 
       <SemestersList semesters={semesters} loading={loading} />

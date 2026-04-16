@@ -7,7 +7,7 @@ import StudentCard from "../../../components/StudentCard";
 import TeacherCard from "../../../components/TeacherCard";
 import DepartmentsList from "./DepartmentsList";
 import { changeStudentSection, createStudent } from "../../../api/students";
-import { getSections } from "../../../api/sections";
+import { getSectionsByYear } from "../../../api/sections";
 import { createTeacher } from "../../../api/teachers";
 import { getDepartments } from "../../../api/departments";
 
@@ -19,6 +19,9 @@ interface AdminPortalTabsProps {
   currentSemesterExists: boolean;
   onDeleteSection: (section: Section) => void;
   isLastSectionOfGrade: (section: Section) => boolean;
+  academicYears: number[];
+  departments: Department[];
+  currentAcademicYear: number | null;
 }
 
 const AdminPortalTabs = ({
@@ -29,6 +32,9 @@ const AdminPortalTabs = ({
   currentSemesterExists,
   onDeleteSection,
   isLastSectionOfGrade,
+  academicYears,
+  departments,
+  currentAcademicYear,  
 }: AdminPortalTabsProps) => {
   const tabs = ["students", "teachers", "sections", "departments"] as const;
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
@@ -49,7 +55,6 @@ const AdminPortalTabs = ({
 
   // Teacher registration state
   const [showRegisterTeacherModal, setShowRegisterTeacherModal] = useState(false);
-  const [departments, setDepartments] = useState<Department[]>([]);
   const [generatedPassword, setGeneratedPassword] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [teacherForm, setTeacherForm] = useState({
@@ -62,18 +67,35 @@ const AdminPortalTabs = ({
   const [registeringTeacher, setRegisteringTeacher] = useState(false);
   const [teacherRegisterError, setTeacherRegisterError] = useState("");
 
-  // Fetch departments when teacher modal opens
+  // Sections year filter
+  const [sectionYear, setSectionYear] = useState<number>(() => {
+    if (academicYears.length) return Math.max(...academicYears);
+    return new Date().getFullYear();
+  });
+  const [filteredSections, setFilteredSections] = useState<Section[]>([]);
+  const [loadingSections, setLoadingSections] = useState(false);
+
+  // Fetch sections when year changes
   useEffect(() => {
-    if (showRegisterTeacherModal && departments.length === 0) {
-      getDepartments().then(setDepartments).catch(console.error);
+    setLoadingSections(true);
+    getSectionsByYear(sectionYear)
+      .then(setFilteredSections)
+      .catch(console.error)
+      .finally(() => setLoadingSections(false));
+  }, [sectionYear]);
+
+  // Update sectionYear when academicYears become available and no year is set
+  useEffect(() => {
+    if (academicYears.length && !sectionYear) {
+      setSectionYear(Math.max(...academicYears));
     }
-  }, [showRegisterTeacherModal]);
+  }, [academicYears]);
 
   const handleStudentSelect = async (student: Student) => {
     setSelectedStudent(student);
     if (student.section) {
       try {
-        const allSections = await getSections(student.section.academic_year_start);
+        const allSections = await getSectionsByYear(student.section.academic_year_start);
         const sameGrade = allSections.filter((s) => s.grade === student.section?.grade);
         setSameGradeSections(sameGrade);
       } catch (err) {
@@ -132,8 +154,7 @@ const AdminPortalTabs = ({
         department_id: Number(teacherForm.department_id),
       });
       setGeneratedPassword(result.plain_password);
-      setShowPassword(false); // start hidden
-      // Clear form fields
+      setShowPassword(false);
       setTeacherForm({ first_name: "", last_name: "", email: "", hire_date: "", department_id: "" });
     } catch (err: any) {
       setTeacherRegisterError(err.response?.data?.detail || "Failed to register teacher");
@@ -141,12 +162,14 @@ const AdminPortalTabs = ({
       setRegisteringTeacher(false);
     }
   };
+
   const copyPasswordToClipboard = () => {
     if (generatedPassword) {
       navigator.clipboard.writeText(generatedPassword);
       alert("Password copied to clipboard!");
     }
   };
+
   return (
     <div className="bg-white rounded-lg shadow p-6 mb-6">
       <h2 className="text-lg font-semibold mb-4">Admin Portal</h2>
@@ -169,12 +192,42 @@ const AdminPortalTabs = ({
 
       <div>
         {activeTab === "sections" && currentSemesterExists && (
-          <SectionsList
-            sections={sections}
-            onAddSection={onAddSection}
-            onDeleteSection={onDeleteSection}
-            isLastSectionOfGrade={isLastSectionOfGrade}
-          />
+          <div>
+            <div className="flex justify-between items-center mb-4">
+              <div className="flex items-center gap-2">
+                <label className="text-sm font-medium text-gray-700">Academic Year:</label>
+                <select
+                  value={sectionYear}
+                  onChange={(e) => setSectionYear(Number(e.target.value))}
+                  className="border rounded px-3 py-1"
+                >
+                  {academicYears.map((y) => (
+                    <option key={y} value={y}>
+                      {y} - {y + 1}
+                    </option>
+                  ))}
+                </select>
+              </div>
+             {currentAcademicYear !== null && sectionYear === currentAcademicYear && (
+                <button
+                  onClick={onAddSection}
+                  className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+                >
+                  Add Section
+                </button>
+              )}
+            </div>
+            {loadingSections ? (
+              <p>Loading sections...</p>
+            ) : (
+              <SectionsList
+                sections={filteredSections}
+                onDeleteSection={onDeleteSection}
+                isLastSectionOfGrade={isLastSectionOfGrade}
+                currentAcademicYear={currentAcademicYear}
+              />
+            )}
+          </div>
         )}
 
         {activeTab === "students" && (
@@ -236,7 +289,7 @@ const AdminPortalTabs = ({
               </div>
             )}
             <br />
-             <div className="flex justify-end mb-4">
+            <div className="flex justify-end mb-4">
               <button
                 onClick={() => setShowRegisterTeacherModal(true)}
                 className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
@@ -247,7 +300,7 @@ const AdminPortalTabs = ({
           </div>
         )}
 
-        {activeTab === "departments" && <DepartmentsList />}
+        {activeTab === "departments" && <DepartmentsList departments={departments} />}
       </div>
 
       {/* Student Registration Modal */}
@@ -302,10 +355,8 @@ const AdminPortalTabs = ({
             </h2>
             
             {!generatedPassword ? (
-              // Registration form
               <form onSubmit={handleTeacherRegisterSubmit}>
                 <div className="space-y-4">
-                  {/* form fields as before */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700">First Name *</label>
                     <input type="text" required value={teacherForm.first_name} onChange={(e) => setTeacherForm({ ...teacherForm, first_name: e.target.value })} className="mt-1 w-full border rounded px-3 py-2" />
@@ -339,36 +390,17 @@ const AdminPortalTabs = ({
                 </div>
               </form>
             ) : (
-              // Password display panel
               <div>
                 <p className="text-gray-700 mb-4">The teacher has been created. Please provide the following password:</p>
                 <div className="flex items-center gap-2 mb-4">
                   <div className="flex-1 bg-gray-100 p-2 rounded border font-mono">
                     {showPassword ? generatedPassword : "••••••••••"}
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="px-3 py-2 text-sm rounded border hover:bg-gray-50"
-                  >
-                    {showPassword ? "Hide" : "Show"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={copyPasswordToClipboard}
-                    className="px-3 py-2 text-sm rounded bg-blue-600 text-white hover:bg-blue-700"
-                  >
-                    Copy
-                  </button>
+                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="px-3 py-2 text-sm rounded border hover:bg-gray-50">{showPassword ? "Hide" : "Show"}</button>
+                  <button type="button" onClick={copyPasswordToClipboard} className="px-3 py-2 text-sm rounded bg-blue-600 text-white hover:bg-blue-700">Copy</button>
                 </div>
                 <div className="flex justify-end">
-                  <button
-                    type="button"
-                    onClick={() => { setShowRegisterTeacherModal(false); setGeneratedPassword(null); setTeacherRegisterError(""); }}
-                    className="px-4 py-2 text-sm rounded bg-green-600 text-white hover:bg-green-700"
-                  >
-                    Done
-                  </button>
+                  <button type="button" onClick={() => { setShowRegisterTeacherModal(false); setGeneratedPassword(null); setTeacherRegisterError(""); }} className="px-4 py-2 text-sm rounded bg-green-600 text-white hover:bg-green-700">Done</button>
                 </div>
               </div>
             )}
