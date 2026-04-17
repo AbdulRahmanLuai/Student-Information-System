@@ -6,14 +6,16 @@ interface StudentCardProps {
   student: Student;
   sections: Section[];
   onMoveSection: (studentId: number, newSectionId: number) => void;
+  showMoveOption?: boolean;  
 }
+
 
 const statusStyle: Record<string, string> = {
   active: "bg-green-100 text-green-700",
   graduated: "bg-blue-100 text-blue-700",
 };
 
-const StudentCard = ({ student: s, sections, onMoveSection }: StudentCardProps) => {
+const StudentCard = ({ student: s, sections, onMoveSection, showMoveOption = true }: StudentCardProps) => {
   const [pendingMove, setPendingMove] = useState<{ newSectionId: number; newSectionName: string } | null>(null);
 
   const handleMoveClick = (newSectionId: number, newSectionName: string) => {
@@ -27,6 +29,7 @@ const StudentCard = ({ student: s, sections, onMoveSection }: StudentCardProps) 
     }
   };
 
+  showMoveOption &&= (s.section != undefined) && (s.status=== "active");
   return (
     <>
       <tr className="hover:bg-gray-50">
@@ -52,7 +55,7 @@ const StudentCard = ({ student: s, sections, onMoveSection }: StudentCardProps) 
         </td>
         <td className="px-4 py-2 border-b">
           <div className="flex gap-2 items-center">
-            <select
+            {showMoveOption && (<select
               onChange={(e) => {
                 const newSectionId = Number(e.target.value);
                 const selectedSection = sections.find(sec => sec.id === newSectionId);
@@ -72,7 +75,8 @@ const StudentCard = ({ student: s, sections, onMoveSection }: StudentCardProps) 
                     {sec.name}
                   </option>
                 ))}
-            </select>
+            </select>)}
+            
             <Link
               to={`/admin/students/${s.id}`}
               className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"

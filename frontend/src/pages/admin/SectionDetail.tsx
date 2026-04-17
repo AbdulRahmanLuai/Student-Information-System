@@ -5,6 +5,7 @@ import { getSectionById } from "../../api/sections";
 import { Section } from "../../types";
 import SectionStudents from "./SectionStudents";
 import SectionCourseOfferings from "./SectionCourseOfferings";
+import { getCurrentSemester } from "../../api/semesters";
 
 const SectionDetail = () => {
   const { sectionId } = useParams(); // fixed param name
@@ -13,6 +14,11 @@ const SectionDetail = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [activeTab, setActiveTab] = useState<"students" | "offerings">("students");
+  const [currentAcademicYear, setCurrentAcademicYear] = useState<number>(0);
+
+  useEffect(() => {
+    getCurrentSemester().then(sem => setCurrentAcademicYear(sem.academic_year_start));
+  }, []);
 
   useEffect(() => {
     const fetchSection = async () => {
@@ -72,7 +78,7 @@ const SectionDetail = () => {
         </div>
       </div>
 
-      {activeTab === "students" && <SectionStudents academicYearStart={section.academic_year_start} />}
+      {activeTab === "students" && <SectionStudents currentAcademicYear={currentAcademicYear} academicYearStart={section.academic_year_start}/>}
       {activeTab === "offerings" && <SectionCourseOfferings />}
     </AdminLayout>
   );

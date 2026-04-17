@@ -8,14 +8,18 @@ import { changeStudentSection } from "../../api/students";
 
 interface SectionStudentsProps {
   academicYearStart: number;
+  currentAcademicYear: number;
 }
 
-const SectionStudents = ({ academicYearStart }: SectionStudentsProps) => {
+
+const SectionStudents = ({ academicYearStart, currentAcademicYear }: SectionStudentsProps) => {
   const { sectionId } = useParams();
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [sections, setSections] = useState<Section[]>([]);
+  const isCurrentYear = academicYearStart === currentAcademicYear;
+
 
   const handleMoveSection = async (studentId: number, newSectionId: number) => {
     try {
@@ -85,6 +89,7 @@ const SectionStudents = ({ academicYearStart }: SectionStudentsProps) => {
                 student={student}
                 sections={sections.filter((sec) => sec.id !== student.section?.id)}
                 onMoveSection={handleMoveSection}
+                showMoveOption={isCurrentYear}
               />
             ))}
           </tbody>
