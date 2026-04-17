@@ -109,6 +109,7 @@ const TeacherCourseOfferingDetails = () => {
         <table className="min-w-full bg-white border rounded-lg shadow">
           <thead className="bg-gray-100 text-left">
             <tr>
+              <th className="px-4 py-2 border-b">ID</th>
               <th className="px-4 py-2 border-b">Student</th>
               <th className="px-4 py-2 border-b">Email</th>
               <th className="px-4 py-2 border-b">Status</th>
@@ -124,6 +125,7 @@ const TeacherCourseOfferingDetails = () => {
                   key={e.id}
                   className={isCompleted ? "bg-gray-50 opacity-70" : ""}
                 >
+                  <td className="px-4 py-2 border-b">{e.student.id}</td>
                   <td className="px-4 py-2 border-b font-medium">
                     {e.student.first_name} {e.student.last_name}
                   </td>

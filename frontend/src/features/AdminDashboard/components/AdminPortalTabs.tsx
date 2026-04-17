@@ -237,6 +237,7 @@ const AdminPortalTabs = ({
                 <table className="min-w-full bg-white border rounded-lg shadow">
                   <thead className="bg-gray-100 text-left">
                     <tr>
+                      <th className="px-4 py-2 border-b">ID</th>
                       <th className="px-4 py-2 border-b">Name</th>
                       <th className="px-4 py-2 border-b">Email</th>
                       <th className="px-4 py-2 border-b">Enrollment Date</th>

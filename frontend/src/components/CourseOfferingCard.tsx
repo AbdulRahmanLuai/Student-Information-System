@@ -209,6 +209,7 @@ const CourseOfferingCard = ({
                 <table className="min-w-full border">
                   <thead className="bg-gray-50">
                     <tr>
+                      <th className="px-4 py-2 border-b text-left">ID</th>
                       <th className="px-4 py-2 border-b text-left">Student</th>
                       <th className="px-4 py-2 border-b text-left">Email</th>
                       <th className="px-4 py-2 border-b text-left">Final Mark</th>
@@ -218,6 +219,7 @@ const CourseOfferingCard = ({
                   <tbody>
                     {enrollments.map((enr) => (
                       <tr key={enr.id}>
+                        <td className="px-4 py-2 border-b text-sm text-gray-600">{enr.student.id}</td>
                         <td className="px-4 py-2 border-b">
                           {enr.student.first_name} {enr.student.last_name}
                         </td>

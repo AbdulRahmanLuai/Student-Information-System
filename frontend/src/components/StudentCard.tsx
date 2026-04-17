@@ -30,6 +30,7 @@ const StudentCard = ({ student: s, sections, onMoveSection }: StudentCardProps) 
   return (
     <>
       <tr className="hover:bg-gray-50">
+        <td className="px-4 py-2 border-b text-sm text-gray-600">{s.id}</td>
         <td className="px-4 py-2 border-b font-medium">
           {s.first_name} {s.last_name}
         </td>
