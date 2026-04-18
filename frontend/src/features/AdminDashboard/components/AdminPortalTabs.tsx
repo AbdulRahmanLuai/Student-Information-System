@@ -39,6 +39,9 @@ const AdminPortalTabs = ({
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [selectedTeacher, setSelectedTeacher] = useState<Teacher | null>(null);
   const [sameGradeSections, setSameGradeSections] = useState<Section[]>([]);
+  useEffect(() => {
+  console.log("current academic year in AdminPortalTabs:", currentAcademicYear);
+}, []);
   
   // Student registration state
   const [showRegisterModal, setShowRegisterModal] = useState(false);
@@ -67,10 +70,7 @@ const AdminPortalTabs = ({
   const [teacherRegisterError, setTeacherRegisterError] = useState("");
 
   // Sections year filter
-  const [sectionYear, setSectionYear] = useState<number>(() => {
-    if (academicYears.length) return Math.max(...academicYears);
-    return new Date().getFullYear();
-  });
+  const [sectionYear, setSectionYear] = useState<number>(currentAcademicYear || new Date().getFullYear());
   const [filteredSections, setFilteredSections] = useState<Section[]>([]);
   const [loadingSections, setLoadingSections] = useState(false);
 

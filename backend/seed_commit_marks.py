@@ -1,49 +1,50 @@
 import asyncio
 from sqlalchemy import create_engine, text
-# Assuming your app structure is still accessible for settings
 from app.config import settings
 
-# --- CONFIGURATION ---
 DATABASE_URL = settings.DATABASE_URL
 
 def commit_marks():
-    """
-    Directly updates the database to set all student enrollments 
-    in the current semester to 'completed' with a final mark.
-    """
     engine = create_engine(DATABASE_URL)
-
-    # SQL logic to target only the 'current' semester's enrollments
-    sql = text("""
+    sql_update_enrollments = text("""
         UPDATE enrollments
-        SET final_mark = 95,
+        SET final_mark = floor(random() * 101)::int,
             status = 'completed'
         FROM course_offerings
         JOIN semesters ON semesters.id = course_offerings.semester_id
         WHERE enrollments.course_offering_id = course_offerings.id
-          AND semesters.status = 'current';
+          AND semesters.status = 'current'
+          AND enrollments.status != 'completed';
+    """)
+    sql_update_course_offerings = text("""
+        UPDATE course_offerings
+        SET status = 'completed'
+        FROM semesters
+        WHERE course_offerings.semester_id = semesters.id
+          AND semesters.status = 'current'
+          AND course_offerings.status != 'completed';
     """)
     
-    print("🚀 Connecting to database to commit marks...")
-    
+    print("🚀 Connecting to database...")
     try:
         with engine.connect() as conn:
-            # Check if there is even a current semester first
+            # Check for current semester
             sem_check = conn.execute(text("SELECT id, number FROM semesters WHERE status = 'current' LIMIT 1"))
             current_sem = sem_check.fetchone()
-            
             if not current_sem:
-                print("⚠️  Aborted: No 'current' semester found in the database.")
+                print("⚠️ Aborted: No 'current' semester found.")
                 return
-
-            print(f"📝 Found active Semester {current_sem[1]}. Updating enrollments...")
+            print(f"📝 Found active Semester {current_sem[1]}.")
             
-            # Execute the update
-            result = conn.execute(sql)
+            # Update enrollments
+            result_enr = conn.execute(sql_update_enrollments)
+            print(f"✅ {result_enr.rowcount} enrollments updated to completed.")
+            
+            # Update course offerings
+            result_co = conn.execute(sql_update_course_offerings)
+            print(f"✅ {result_co.rowcount} course offerings marked as completed.")
+            
             conn.commit()
-            
-            print(f"✅ Success: {result.rowcount} enrollments have been marked as completed.")
-            
     except Exception as e:
         print(f"❌ Database Error: {e}")
 

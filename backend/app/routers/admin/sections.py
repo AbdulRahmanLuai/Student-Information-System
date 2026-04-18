@@ -94,7 +94,6 @@ def get_sections(
                 has_unassigned_course_offerings=has_unassigned
             )
         )
-    
     return sections_out
 
 @router.get('/sections/{section_id}', response_model=schemas.SectionOut)

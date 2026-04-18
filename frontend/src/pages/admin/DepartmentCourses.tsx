@@ -185,10 +185,6 @@ const DepartmentCourses = ({
                   ) : (
                     <CourseOfferingCard
                       offerings={offerings}
-                      onUpdateTeacher={isCurrentSemester ? handleUpdateTeacher : undefined}
-                      fetchTeachers={isCurrentSemester ? fetchTeachersForDepartment : undefined}
-                      canEdit={isCurrentSemester}
-                      readOnly={!isCurrentSemester}
                       showSection={true}
                     />
                   )}

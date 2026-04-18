@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 from typing import Literal, Optional, Union
-from .models import Role, SemesterStatus, CourseStatus, StudentStatus
+from .models import CourseOfferingStatus, Role, SemesterStatus, CourseStatus, StudentStatus
 from datetime import date
 
 
@@ -199,6 +199,7 @@ class CourseOfferingOut(BaseModel):
     section: SectionOut
     semester: SemesterOut
     teacher: Optional[TeacherOut] = None
+    status: CourseOfferingStatus
 
     class Config:
         from_attributes = True
@@ -219,8 +220,6 @@ class EnrollmentOut(BaseModel):
         
 class EnrollmentCreate(BaseModel):
     student_id: int
-    course_offering_id: int
-    
     
 class SetupSectionPreview(BaseModel):
     id: int

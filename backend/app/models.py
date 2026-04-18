@@ -117,7 +117,10 @@ class Student(SQLModel, table=True):
     section: Optional[Section] = Relationship(back_populates="students")
     enrollments: list["Enrollment"] = Relationship(back_populates="student")
 
-
+class CourseOfferingStatus(str, Enum):
+    active = "active"
+    completed = "completed"
+    
 class CourseOffering(SQLModel, table=True):
     __tablename__ = "course_offerings"
     
@@ -126,6 +129,7 @@ class CourseOffering(SQLModel, table=True):
     section_id: Optional[int] = Field(default=None, foreign_key="sections.id")
     semester_id: Optional[int] = Field(default=None, foreign_key="semesters.id")
     teacher_id: Optional[int] = Field(default=None, foreign_key="teachers.id")
+    status: str = Field(default=CourseOfferingStatus.active)    
     
     # Relationships
     course: Optional[Course] = Relationship(back_populates="course_offerings")
@@ -134,7 +138,10 @@ class CourseOffering(SQLModel, table=True):
     teacher: Optional[Teacher] = Relationship(back_populates="course_offerings")
     enrollments: list["Enrollment"] = Relationship(back_populates="course_offering")
 
-
+class EnrollmentStatus(str, Enum):
+    active = "active"
+    completed = "completed"
+    
 class Enrollment(SQLModel, table=True):
     __tablename__ = "enrollments"
     __table_args__ = (
@@ -145,7 +152,7 @@ class Enrollment(SQLModel, table=True):
     student_id: Optional[int] = Field(default=None, foreign_key="students.id")
     course_offering_id: Optional[int] = Field(default=None, foreign_key="course_offerings.id")
     final_mark: Optional[str] = None
-    status: str  # e.g., 'active', 'completed'
+    status: EnrollmentStatus = Field(default=EnrollmentStatus.active)
     
     # Relationships
     student: Optional[Student] = Relationship(back_populates="enrollments")

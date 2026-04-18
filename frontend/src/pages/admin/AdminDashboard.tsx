@@ -89,12 +89,14 @@ const AdminDashboard = () => {
         onMigrate={handleMigrate}
       />
 
-      <AdminPortalTabs
-        activeTab={activePortalTab}
-        onTabChange={setActivePortalTab}
-        sections={sections}
-        onAddSection={() => {
-          setShowAddSection(true);
+      {currentAcademicYear !== null && (
+
+        <AdminPortalTabs
+          activeTab={activePortalTab}
+          onTabChange={setActivePortalTab}
+          sections={sections}
+          onAddSection={() => {
+            setShowAddSection(true);
           setSelectedGrade(null);
           setAddSectionError("");
         }}
@@ -104,7 +106,7 @@ const AdminDashboard = () => {
         academicYears={academicYears}
         departments={departments}
         currentAcademicYear={currentAcademicYear}
-      />
+      />  )}
 
       <SemestersList semesters={semesters} loading={loading} />
 

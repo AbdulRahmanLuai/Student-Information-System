@@ -5,7 +5,7 @@ from ..database import get_db
 from sqlmodel import Session
 from sqlalchemy import select, func, update
 from sqlalchemy.orm import joinedload
-from ..models import (Section, Semester, Student, Course, CourseOffering, Enrollment, Teacher, User, Role, SemesterStatus)
+from ..models import (CourseOfferingStatus, Section, Semester, Student, Course, CourseOffering, Enrollment, Teacher, User, Role, SemesterStatus)
 from typing import List, Optional
 from .. import oauth2
 import pandas as pd
@@ -226,44 +226,6 @@ def enter_marks(
     db.commit()
     return {"message": "Marks saved"}
 
-@router.put("/{enrollment_id}", response_model=schemas.EnrollmentOut)
-def enter_mark(
-    mark_input: schemas.MarkInput,
-    enrollment_id: int,
-    db: Session = Depends(get_db),
-    current_user=Depends(oauth2.get_current_user)
-):
-    teacher = get_teacher_from_user(current_user.id, db)
-    if not teacher:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="User is not a teacher"
-        )
-
-    # Atomic update: only active enrollments for the teacher
-    stmt = (
-        update(Enrollment)
-        .where(
-            Enrollment.id == enrollment_id,
-            Enrollment.status == "active",
-            Enrollment.course_offering.has(CourseOffering.teacher_id == teacher.id)
-        )
-        .values(final_mark=mark_input.mark)
-        .returning(Enrollment)
-    )
-
-    enrollment = db.execute(stmt).scalars().first()
-
-    if not enrollment:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Enrollment not found, not active, or not editable by you"
-        )
-
-    db.commit()
-    db.refresh(enrollment)
-    return enrollment    
-    
 
 
 @router.post("/{course_offering_id}/enrollments/commit", response_model=list[schemas.EnrollmentOut])
@@ -323,6 +285,9 @@ def commit_marks(
         .values(status="completed")
     )
     db.execute(stmt_update)
+    # set course_offering to completed
+    course_offering.status = CourseOfferingStatus.completed
+    db.add(course_offering)
     db.commit()
 
     # 5️⃣ Refetch ORM objects for response
@@ -334,11 +299,7 @@ def commit_marks(
     ).scalars().all()
 
     return updated_enrollments
-
-
-# TODO: Excel in, Excel out
-    
-    
+        
     
 @router.get("/{course_offering_id}", response_model=schemas.CourseOfferingOut)
 def get_course_offering_by_id(

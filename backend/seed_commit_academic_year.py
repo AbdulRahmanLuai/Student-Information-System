@@ -47,6 +47,16 @@ async def prepare_for_commit():
                 """))
                 conn.commit()
             print("  ✅ Database: All current enrollments set to 99.")
+            with engine.connect() as conn:
+                conn.execute(text("""
+                    UPDATE course_offerings 
+                    SET status = 'completed' 
+                    FROM semesters 
+                    WHERE course_offerings.semester_id = semesters.id 
+                    AND semesters.status = 'current';
+                """))
+                conn.commit()
+            print("  ✅ Database: All current course offerings set to completed.")
 
             # 2. End Semester
             # Added raise_for_status() to catch the 401s immediately

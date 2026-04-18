@@ -2,6 +2,7 @@ export type Role = "admin" | "teacher";
 export type CourseStatus = "active" | "inactive";
 export type SemesterStatus = "upcoming" | "current" | "completed";
 export type StudentStatus = "active" | "inactive" | "graduated";
+export type CourseOfferingStatus = "active" | "completed";
 
 export interface Department {
   id: number;
@@ -67,12 +68,14 @@ export interface Student {
   section: Section | null;  // not section_id
 }
 
+
 export interface CourseOffering {
   id: number;
   course: Course;
   section: Section;
   semester: Semester;
   teacher: Teacher;
+  status: CourseOfferingStatus;
 }
 
 export interface Enrollment {

@@ -74,10 +74,6 @@ const SectionCourseOfferings = () => {
             <div className="p-4">
               <CourseOfferingCard
                 offerings={offerings}
-                onUpdateTeacher={isCurrent ? handleUpdateTeacher : undefined}
-                fetchTeachers={isCurrent ? fetchTeachersForDepartment : undefined}
-                canEdit={isCurrent}
-                readOnly={!isCurrent}
                 showSection={false}
               />
             </div>

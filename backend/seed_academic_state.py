@@ -3,7 +3,6 @@ import asyncio
 from sqlalchemy import create_engine, text
 from app.config import settings
 
-
 # --- CONFIGURATION ---
 DATABASE_URL = settings.DATABASE_URL
 BASE_URL = "http://localhost:8000"
@@ -27,23 +26,38 @@ async def run_full_automation():
 
             print(f"\n🔄 Processing Semester {current_sem_number}...")
 
-            # 1. DIRECT DATABASE UPDATE (Bulk Marks)
-            sql = text("""
+            # 1. DIRECT DATABASE UPDATE (Bulk Marks) - only non-completed enrollments
+            sql_enr = text("""
                 UPDATE enrollments
                 SET final_mark = 99,
                     status = 'completed'
                 FROM course_offerings
                 JOIN semesters ON semesters.id = course_offerings.semester_id
                 WHERE enrollments.course_offering_id = course_offerings.id
-                  AND semesters.status = 'current';
+                  AND semesters.status = 'current'
+                  AND enrollments.status != 'completed';
             """)
             
             with engine.connect() as conn:
-                result = conn.execute(sql)
+                result_enr = conn.execute(sql_enr)
                 conn.commit()
-                print(f"✅ SQL Executed: {result.rowcount} enrollments updated.")
+                print(f"✅ SQL Executed: {result_enr.rowcount} enrollments updated.")
 
-            # 2. API: END SEMESTER (Always happens for 1, 2, and 3)
+            # 2. Mark course offerings as completed (only if not already)
+            sql_co = text("""
+                UPDATE course_offerings
+                SET status = 'completed'
+                FROM semesters
+                WHERE course_offerings.semester_id = semesters.id
+                  AND semesters.status = 'current'
+                  AND course_offerings.status != 'completed';
+            """)
+            with engine.connect() as conn:
+                result_co = conn.execute(sql_co)
+                conn.commit()
+                print(f"✅ Course offerings updated: {result_co.rowcount} marked completed.")
+
+            # 3. API: END SEMESTER (Always happens for 1, 2, and 3)
             print(f"🕒 Ending Semester {current_sem_number} via API...")
             end_res = await client.post(f"{BASE_URL}/admin/semesters/end", headers=headers)
             end_res.raise_for_status()
@@ -53,7 +67,7 @@ async def run_full_automation():
                 print("🏁 Semester 3 ended. Skipping advancement as requested.")
                 break
 
-            # 3. API: ADVANCE SEMESTER (Only happens for 1 and 2)
+            # 4. API: ADVANCE SEMESTER (Only happens for 1 and 2)
             print(f"🚀 Advancing to next semester via API...")
             adv_res = await client.post(f"{BASE_URL}/admin/semesters/advance", headers=headers)
             adv_res.raise_for_status()

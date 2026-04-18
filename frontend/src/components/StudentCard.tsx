@@ -99,8 +99,9 @@ const StudentCard = ({ student: s, sections, onMoveSection, showMoveOption = tru
               to section{" "}
               <span className="font-medium text-gray-800">{pendingMove.newSectionName}</span>?
             </p>
-            <p className="text-sm text-gray-500 mb-4">
-              This will remove their current enrollments and re-enroll them in the new section's course offerings.
+            <p className="text-sm text-red-500 mb-4">
+              * This will remove their current enrollments and re-enroll them in the new section's course offerings. 
+              This intails the loss of any marks or progress they had in the current section. It is advised that this is only done at the beginning of a semester before any marks have been entered.
             </p>
             <div className="flex gap-2 justify-end">
               <button
@@ -111,7 +112,7 @@ const StudentCard = ({ student: s, sections, onMoveSection, showMoveOption = tru
               </button>
               <button
                 onClick={confirmMove}
-                className="px-4 py-2 text-sm rounded bg-yellow-500 text-white hover:bg-yellow-600"
+                className="px-4 py-2 text-sm rounded bg-red-500 text-white hover:bg-red-600"
               >
                 Confirm Move
               </button>
