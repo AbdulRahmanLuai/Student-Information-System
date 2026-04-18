@@ -28,6 +28,9 @@ class StudentBasic(BaseModel):
         
 class MarkInput(BaseModel):
     mark: int = Field(ge=0, le=100) 
+class MarkUpdate(BaseModel):
+    enrollment_id: int
+    final_mark: int =  Field(ge=0, le=100) 
     
     
 class UserCreateBase(BaseModel):
@@ -267,3 +270,4 @@ class EnrollAllOut(BaseModel):
     student_count: int
     enrollment_count: int
     course_offering_count: int
+    

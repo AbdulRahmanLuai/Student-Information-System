@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+import io
+from fastapi import APIRouter, Depends, HTTPException, status, Query, File, UploadFile
 from .. import models, schemas
 from ..database import get_db
 from sqlmodel import Session
@@ -7,6 +8,8 @@ from sqlalchemy.orm import joinedload
 from ..models import (Section, Semester, Student, Course, CourseOffering, Enrollment, Teacher, User, Role, SemesterStatus)
 from typing import List, Optional
 from .. import oauth2
+import pandas as pd
+import io
 
 
 """
@@ -50,6 +53,69 @@ def get_teacher_from_user(user_id: int, db: Session) -> Teacher:
     ).scalars().first()
 
 
+
+@router.post('/{course_offering_id}/upload-marks')
+async def upload_marks(course_offering_id: int, file: UploadFile = File(...), current_user=Depends(oauth2.get_current_user), db: Session = Depends(get_db) ):
+    
+    # 1. Validate course offering ownership
+    teacher = get_teacher_from_user(current_user.id, db)
+    if not teacher:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="User is not a teacher"
+        )
+
+    course_offering = db.get(CourseOffering, course_offering_id)
+    if not course_offering:
+        raise HTTPException(404, "Course offering not found")
+
+    if course_offering.teacher_id != teacher.id:
+        raise HTTPException(403, "Not authorized to upload marks for this course offering")
+    
+    
+    try:
+        contents = await file.read()
+        df = pd.read_excel(io.BytesIO(contents))
+    except Exception as e:
+        raise HTTPException(400, f"Error processing Excel file: {str(e)}")
+    
+    required_columns = {"student_id", "final_mark"}
+    print("Columns in uploaded file:", df.columns)
+    if not required_columns.issubset(df.columns):
+        raise HTTPException(400, f"Excel file must contain columns: {', '.join(required_columns)}")
+    
+    student_ids = db.execute(
+        select(Student.id).join(Enrollment).where(Enrollment.course_offering_id == course_offering_id)
+    ).scalars().all()
+    
+    # validate all student_ids exist in the uploaded excel file
+    missing_students = set(student_ids) - set(df["student_id"])
+    if missing_students:
+        raise HTTPException(400, f"Marks for the following student IDs are missing in the Excel file: {', '.join(map(str, missing_students))}")
+    
+    # validate final_mark values
+    df = df[df["student_id"].isin(student_ids)]  # filter to only relevant students
+    if df["final_mark"].isnull().any():
+        raise HTTPException(400, "All final_mark values must be provided and cannot be null")
+    if not df["final_mark"].apply(lambda x: isinstance(x, (int, float)) and 0 <= x <= 100).all():
+        raise HTTPException(400, "All final_mark values must be numbers between 0 and 100")
+    
+    
+    records = df.to_dict(orient="records")
+    for rec in records:
+        # Round .5 up
+        rec["final_mark"] = int(rec["final_mark"] + 0.5)
+        
+    return {"message": "success",
+            "data": records}
+    
+    
+    
+
+    
+    
+    
+    
 @router.get("", response_model=List[schemas.CourseOfferingOut])
 def get_my_course_offerings(
     semester_id: Optional[int] = Query(None),
@@ -134,6 +200,31 @@ def get_course_offering_enrollments(
     return enrollments
 
 
+@router.post('/{course_offering_id}/marks')
+def enter_marks(
+    course_offering_id: int,
+    updates: List[schemas.MarkUpdate],
+    current_user=Depends(oauth2.get_current_user),
+    db: Session = Depends(get_db)
+):
+    # Verify teacher owns the course offering
+    teacher = get_teacher_from_user(current_user.id, db)
+    if not teacher:
+        raise HTTPException(403, "User is not a teacher")
+    
+    course_offering = db.get(CourseOffering, course_offering_id)
+    if not course_offering or course_offering.teacher_id != teacher.id:
+        raise HTTPException(403, "Not authorized for this course offering")
+    
+    # Apply updates
+    for upd in updates:
+        enrollment = db.get(Enrollment, upd.enrollment_id)
+        if enrollment and enrollment.course_offering_id == course_offering_id:
+            enrollment.final_mark = str(upd.final_mark) if upd.final_mark is not None else None
+            print(upd.final_mark)
+            db.add(enrollment)
+    db.commit()
+    return {"message": "Marks saved"}
 
 @router.put("/{enrollment_id}", response_model=schemas.EnrollmentOut)
 def enter_mark(
