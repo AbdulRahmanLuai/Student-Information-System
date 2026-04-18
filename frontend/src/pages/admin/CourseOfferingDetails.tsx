@@ -262,7 +262,7 @@ const CourseOfferingDetails = () => {
                     {editMode && (
                       <button
                         onClick={() => setShowDeleteConfirm(enr)}
-                        className="text-red-600 hover:text-red-800 text-sm"
+                        className="text-sm text-red-600 hover:text-red-800 border border-red-300 rounded px-2 py-0.5"
                       >
                         Delete
                       </button>

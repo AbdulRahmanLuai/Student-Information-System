@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
 import { Course, CourseOffering } from "../../types";
 import { getDepartmentCourses } from "../../api/departments";
-import { getCourseOfferings, updateCourseOfferingTeacher } from "../../api/courseOfferings";
-import { getTeachers } from "../../api/teachers";
+import { getCourseOfferings} from "../../api/courseOfferings";
 import CourseOfferingCard from "../../components/CourseOfferingCard";
 
 interface DepartmentCoursesProps {
@@ -28,40 +27,7 @@ const DepartmentCourses = ({
   const [offeringsMap, setOfferingsMap] = useState<Map<number, CourseOffering[]>>(new Map());
   const [loadingOfferings, setLoadingOfferings] = useState(false);
 
-  // Helper to refresh offerings after edit
-  const refreshOfferings = async () => {
-    if (selectedYear > currentAcademicYear || selectedSemester === 0) return;
-    setLoadingOfferings(true);
-    try {
-      const offerings = await getCourseOfferings({
-        department_id: departmentId,
-        academic_year_start: selectedYear,
-        semester_number: selectedSemester,
-      });
-      const map = new Map<number, CourseOffering[]>();
-      offerings.forEach(off => {
-        const courseId = off.course.id;
-        if (!map.has(courseId)) map.set(courseId, []);
-        map.get(courseId)!.push(off);
-      });
-      setOfferingsMap(map);
-    } catch (err) {
-      console.error("Failed to refresh offerings", err);
-    } finally {
-      setLoadingOfferings(false);
-    }
-  };
 
-  // Handler for updating teacher
-  const handleUpdateTeacher = async (offeringId: number, teacherId: number) => {
-    const updated = await updateCourseOfferingTeacher(offeringId, teacherId);
-    await refreshOfferings(); // refresh after update
-    return updated;
-  };
-
-  const fetchTeachersForDepartment = async (departmentId: number) => {
-    return await getTeachers(departmentId);
-  };
 
   useEffect(() => {
     const fetchCourses = async () => {

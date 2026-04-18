@@ -39,9 +39,7 @@ const AdminPortalTabs = ({
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [selectedTeacher, setSelectedTeacher] = useState<Teacher | null>(null);
   const [sameGradeSections, setSameGradeSections] = useState<Section[]>([]);
-  useEffect(() => {
-  console.log("current academic year in AdminPortalTabs:", currentAcademicYear);
-}, []);
+  
   
   // Student registration state
   const [showRegisterModal, setShowRegisterModal] = useState(false);
@@ -73,6 +71,9 @@ const AdminPortalTabs = ({
   const [sectionYear, setSectionYear] = useState<number>(currentAcademicYear || new Date().getFullYear());
   const [filteredSections, setFilteredSections] = useState<Section[]>([]);
   const [loadingSections, setLoadingSections] = useState(false);
+
+  // Section edit state
+  const [sectionEditMode, setSectionEditMode] = useState(false);
 
   // Fetch sections when year changes
   useEffect(() => {
@@ -189,25 +190,23 @@ const AdminPortalTabs = ({
         ))}
       </div>
 
-      <div>
-        {activeTab === "sections" && currentSemesterExists && (
-          <div>
-            <div className="flex justify-between items-center mb-4">
-              <div className="flex items-center gap-2">
-                <label className="text-sm font-medium text-gray-700">Academic Year:</label>
-                <select
-                  value={sectionYear}
-                  onChange={(e) => setSectionYear(Number(e.target.value))}
-                  className="border rounded px-3 py-1"
-                >
-                  {academicYears.map((y) => (
-                    <option key={y} value={y}>
-                      {y} - {y + 1}
-                    </option>
-                  ))}
-                </select>
-              </div>
-             {currentAcademicYear !== null && sectionYear === currentAcademicYear && (
+      {activeTab === "sections" && currentSemesterExists && (
+        <div>
+          <div className="flex justify-between items-center mb-4">
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium text-gray-700">Academic Year:</label>
+              <select
+                value={sectionYear}
+                onChange={(e) => setSectionYear(Number(e.target.value))}
+                className="border rounded px-3 py-1"
+              >
+                {academicYears.map((y) => (
+                  <option key={y} value={y}>{y} - {y + 1}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex gap-2">
+              {currentAcademicYear !== null && sectionYear === currentAcademicYear && (
                 <button
                   onClick={onAddSection}
                   className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
@@ -215,93 +214,111 @@ const AdminPortalTabs = ({
                   Add Section
                 </button>
               )}
-            </div>
-            {loadingSections ? (
-              <p>Loading sections...</p>
-            ) : (
-              <SectionsList
-                sections={filteredSections}
-                onDeleteSection={onDeleteSection}
-                isLastSectionOfGrade={isLastSectionOfGrade}
-                currentAcademicYear={currentAcademicYear}
-              />
-            )}
-          </div>
-        )}
-
-        {activeTab === "students" && (
-          <div>
-            <StudentSearchBar onSelect={handleStudentSelect} />
-            {selectedStudent && (
-              <div className="overflow-x-auto mt-4">
-                <table className="min-w-full bg-white border rounded-lg shadow">
-                  <thead className="bg-gray-100 text-left">
-                    <tr>
-                      <th className="px-4 py-2 border-b">ID</th>
-                      <th className="px-4 py-2 border-b">Name</th>
-                      <th className="px-4 py-2 border-b">Email</th>
-                      <th className="px-4 py-2 border-b">Enrollment Date</th>
-                      <th className="px-4 py-2 border-b">Status</th>
-                      <th className="px-4 py-2 border-b">Section</th>
-                      <th className="px-4 py-2 border-b">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <StudentCard
-                      student={selectedStudent}
-                      sections={sameGradeSections}
-                      onMoveSection={handleMoveSection}
-                    />
-                  </tbody>
-                </table>
-              </div>
-            )}
-            <br />
-            <div className="flex justify-end mb-4">
-              <button
-                onClick={() => setShowRegisterModal(true)}
-                className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
-              >
-                Register New Student
-              </button>
+              {currentAcademicYear !== null && sectionYear === currentAcademicYear && (
+                !sectionEditMode ? (
+                  <button
+                    onClick={() => setSectionEditMode(true)}
+                    className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                  >
+                    Edit
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => setSectionEditMode(false)}
+                    className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
+                  >
+                    Cancel
+                  </button>
+                )
+              )}
             </div>
           </div>
-        )}
+          {loadingSections ? (
+            <p>Loading sections...</p>
+          ) : (
+            <SectionsList
+              sections={filteredSections}
+              onDeleteSection={onDeleteSection}
+              isLastSectionOfGrade={isLastSectionOfGrade}
+              currentAcademicYear={currentAcademicYear}
+              editMode={sectionEditMode}
+            />
+          )}
+        </div>
+      )}
 
-        {activeTab === "teachers" && (
-          <div>
-            <TeacherSearchBar onSelect={handleTeacherSelect} />
-            {selectedTeacher && (
-              <div className="overflow-x-auto mt-4">
-                <table className="min-w-full bg-white border rounded-lg shadow">
-                  <thead className="bg-gray-100 text-left">
-                    <tr>
-                      <th className="px-4 py-2 border-b">ID</th>
-                      <th className="px-4 py-2 border-b">Name</th>
-                      <th className="px-4 py-2 border-b">Hire Date</th>
-                      <th className="px-4 py-2 border-b">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <TeacherCard teacher={selectedTeacher} />
-                  </tbody>
-                </table>
-              </div>
-            )}
-            <br />
-            <div className="flex justify-end mb-4">
-              <button
-                onClick={() => setShowRegisterTeacherModal(true)}
-                className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
-              >
-                Add New Teacher
-              </button>
+      {activeTab === "students" && (
+        <div>
+          <StudentSearchBar onSelect={handleStudentSelect} />
+          {selectedStudent && (
+            <div className="overflow-x-auto mt-4">
+              <table className="min-w-full bg-white border rounded-lg shadow">
+                <thead className="bg-gray-100 text-left">
+                  <tr>
+                    <th className="px-4 py-2 border-b">ID</th>
+                    <th className="px-4 py-2 border-b">Name</th>
+                    <th className="px-4 py-2 border-b">Email</th>
+                    <th className="px-4 py-2 border-b">Enrollment Date</th>
+                    <th className="px-4 py-2 border-b">Status</th>
+                    <th className="px-4 py-2 border-b">Section</th>
+                    <th className="px-4 py-2 border-b">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <StudentCard
+                    student={selectedStudent}
+                    sections={sameGradeSections}
+                    onMoveSection={handleMoveSection}
+                  />
+                </tbody>
+              </table>
             </div>
+          )}
+          <br />
+          <div className="flex justify-end mb-4">
+            <button
+              onClick={() => setShowRegisterModal(true)}
+              className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+            >
+              Register New Student
+            </button>
           </div>
-        )}
+        </div>
+      )}
 
-        {activeTab === "departments" && <DepartmentsList departments={departments} />}
-      </div>
+      {activeTab === "teachers" && (
+        <div>
+          <TeacherSearchBar onSelect={handleTeacherSelect} />
+          {selectedTeacher && (
+            <div className="overflow-x-auto mt-4">
+              <table className="min-w-full bg-white border rounded-lg shadow">
+                <thead className="bg-gray-100 text-left">
+                  <tr>
+                    <th className="px-4 py-2 border-b">ID</th>
+                    <th className="px-4 py-2 border-b">Name</th>
+                    <th className="px-4 py-2 border-b">Hire Date</th>
+                    <th className="px-4 py-2 border-b">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <TeacherCard teacher={selectedTeacher} />
+                </tbody>
+              </table>
+            </div>
+          )}
+          <br />
+          <div className="flex justify-end mb-4">
+            <button
+              onClick={() => setShowRegisterTeacherModal(true)}
+              className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+            >
+              Add New Teacher
+            </button>
+          </div>
+        </div>
+      )}
+
+      {activeTab === "departments" && <DepartmentsList departments={departments} />}
 
       {/* Student Registration Modal */}
       {showRegisterModal && (

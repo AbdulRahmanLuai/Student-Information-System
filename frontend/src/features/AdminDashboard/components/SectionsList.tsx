@@ -6,9 +6,10 @@ interface SectionsListProps {
   onDeleteSection: (section: Section) => void;
   isLastSectionOfGrade: (section: Section) => boolean;
   currentAcademicYear: number | null;
+  editMode: boolean;
 }
 
-const SectionsList = ({ sections, onDeleteSection, isLastSectionOfGrade, currentAcademicYear }: SectionsListProps) => {
+const SectionsList = ({ sections, onDeleteSection, isLastSectionOfGrade, currentAcademicYear, editMode }: SectionsListProps) => {
   if (sections.length === 0) {
     return <p className="text-gray-500">No sections found for this academic year.</p>;
   }
@@ -36,11 +37,11 @@ const SectionsList = ({ sections, onDeleteSection, isLastSectionOfGrade, current
                   >
                     Details
                   </Link>
-                  {currentAcademicYear !== undefined && section.academic_year_start === currentAcademicYear && (
+                  {editMode && currentAcademicYear !== null && section.academic_year_start === currentAcademicYear && (
                     <button
                       onClick={() => onDeleteSection(section)}
                       disabled={isLastSectionOfGrade(section)}
-                      className="px-3 py-1 text-sm bg-red-600 text-white rounded hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                      className="text-sm text-red-600 hover:text-red-800 border border-red-300 rounded px-2 py-0.5"
                     >
                       Delete
                     </button>

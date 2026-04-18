@@ -33,24 +33,6 @@ const SectionCourseOfferings = () => {
     fetchOfferings();
   }, [sectionId]);
 
-  const handleUpdateTeacher = async (offeringId: number, teacherId: number) => {
-    const updated = await updateCourseOfferingTeacher(offeringId, teacherId);
-    // Refresh offerings after update
-    const refreshed = await getCourseOfferings({ section_id: Number(sectionId) });
-    const groups = new Map<number, { offerings: CourseOffering[]; status: string }>();
-    refreshed.forEach((offering) => {
-      const semNum = offering.semester.number;
-      const status = offering.semester.status;
-      if (!groups.has(semNum)) groups.set(semNum, { offerings: [], status });
-      groups.get(semNum)!.offerings.push(offering);
-    });
-    setGroupedOfferings(groups);
-    return updated;
-  };
-
-  const fetchTeachersForDepartment = async (departmentId: number) => {
-    return await getTeachers(departmentId);
-  };
 
   if (loading) return <div>Loading...</div>;
   if (error) return <div className="text-red-500">{error}</div>;
