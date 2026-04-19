@@ -58,6 +58,7 @@ const AdminDashboard = () => {
   }, []);
 
   const currentAcademicYear = currentSemester ? currentSemester.academic_year_start : null;
+  const currentSemesterNumber = currentSemester ? currentSemester.number : null;
 
   return (
     <AdminLayout>
@@ -106,6 +107,7 @@ const AdminDashboard = () => {
         academicYears={academicYears}
         departments={departments}
         currentAcademicYear={currentAcademicYear}
+        currentSemesterNumber={currentSemesterNumber}
       />  )}
 
       <SemestersList semesters={semesters} loading={loading} />

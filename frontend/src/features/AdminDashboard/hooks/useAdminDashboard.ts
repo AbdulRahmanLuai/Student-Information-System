@@ -44,7 +44,7 @@ export const useAdminDashboard = () => {
   const [deleteSectionError, setDeleteSectionError] = useState("");
 
   const [activePortalTab, setActivePortalTab] = useState<
-    "students" | "teachers" | "sections" | "departments"
+    "students" | "teachers" | "sections" | "departments" | "course-offerings"
   >("sections");
 
   useEffect(() => {

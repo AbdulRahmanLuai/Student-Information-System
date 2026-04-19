@@ -1,10 +1,10 @@
 interface AdminTabsHeaderProps {
-  activeTab: "students" | "teachers" | "sections" | "departments";
-  onTabChange: (tab: "students" | "teachers" | "sections" | "departments") => void;
+  activeTab: "students" | "teachers" | "sections" | "departments" | "course-offerings";
+  onTabChange: (tab: "students" | "teachers" | "sections" | "departments" | "course-offerings") => void;
 }
 
 const AdminTabsHeader = ({ activeTab, onTabChange }: AdminTabsHeaderProps) => {
-  const tabs = ["students", "teachers", "sections", "departments"] as const;
+  const tabs = ["students", "teachers", "sections", "departments", "course-offerings"] as const;
   return (
     <div className="flex gap-2 mb-4 border-b border-gray-200">
       {tabs.map((tab) => (

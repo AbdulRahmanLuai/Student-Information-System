@@ -10,10 +10,12 @@ import { useState } from "react";
 import { changeStudentSection, createStudent } from "../../../api/students";
 import { getSectionsByYear } from "../../../api/sections";
 import { createTeacher } from "../../../api/teachers";
+import CourseOfferingsTab from "./CourseOfferingsTab";
+
 
 interface AdminPortalTabsProps {
-  activeTab: "students" | "teachers" | "sections" | "departments";
-  onTabChange: (tab: "students" | "teachers" | "sections" | "departments") => void;
+  activeTab: "students" | "teachers" | "sections" | "departments" | "course-offerings";
+  onTabChange: (tab: "students" | "teachers" | "sections" | "departments" | "course-offerings") => void;
   sections: Section[];
   onAddSection: () => void;
   currentSemesterExists: boolean;
@@ -22,6 +24,7 @@ interface AdminPortalTabsProps {
   academicYears: number[];
   departments: Department[];
   currentAcademicYear: number | null;
+  currentSemesterNumber: number | null;
 }
 
 const AdminPortalTabs = ({
@@ -35,6 +38,7 @@ const AdminPortalTabs = ({
   academicYears,
   departments,
   currentAcademicYear,
+  currentSemesterNumber
 }: AdminPortalTabsProps) => {
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [selectedTeacher, setSelectedTeacher] = useState<Teacher | null>(null);
@@ -168,6 +172,16 @@ const AdminPortalTabs = ({
 
       {activeTab === "departments" && <DepartmentsTab departments={departments} />}
 
+      {activeTab === "course-offerings" && (
+        <CourseOfferingsTab
+          academicYears={academicYears}
+          sections={sections}
+          departments={departments}
+          currentAcademicYear={currentAcademicYear ?? new Date().getFullYear()}
+          currentSemesterNumber={currentSemesterNumber ?? 1}
+        />
+      )}
+
       <StudentRegistrationModal
         show={showRegisterModal}
         onClose={() => setShowRegisterModal(false)}
@@ -176,6 +190,7 @@ const AdminPortalTabs = ({
         registering={registering}
         error={registerError}
       />
+
 
       <TeacherRegistrationModal
         show={showRegisterTeacherModal}
