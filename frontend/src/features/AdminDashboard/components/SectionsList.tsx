@@ -25,31 +25,38 @@ const SectionsList = ({ sections, onDeleteSection, isLastSectionOfGrade, current
           </tr>
         </thead>
         <tbody>
-          {sections.map((section) => (
-            <tr key={section.id} className="hover:bg-gray-50">
-              <td className="px-4 py-2 border-b">{section.grade}{section.name}</td>
-              <td className="px-4 py-2 border-b">{section.academic_year_start} - {section.academic_year_start + 1}</td>
-              <td className="px-4 py-2 border-b">
-                <div className="flex gap-2">
-                  <Link
-                    to={`/admin/sections/${section.id}`}
-                    className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
-                  >
-                    Details
-                  </Link>
-                  {editMode && currentAcademicYear !== null && section.academic_year_start === currentAcademicYear && (
-                    <button
-                      onClick={() => onDeleteSection(section)}
-                      disabled={isLastSectionOfGrade(section)}
-                      className="text-sm text-red-600 hover:text-red-800 border border-red-300 rounded px-2 py-0.5"
+          {sections.map((section) => {
+            const isLast = isLastSectionOfGrade(section);
+            return (
+              <tr key={section.id} className="hover:bg-gray-50">
+                <td className="px-4 py-2 border-b">{section.grade}{section.name}</td>
+                <td className="px-4 py-2 border-b">{section.academic_year_start} - {section.academic_year_start + 1}</td>
+                <td className="px-4 py-2 border-b">
+                  <div className="flex gap-2">
+                    <Link
+                      to={`/admin/sections/${section.id}`}
+                      className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
                     >
-                      Delete
-                    </button>
-                  )}
-                </div>
-              </td>
-            </tr>
-          ))}
+                      Details
+                    </Link>
+                    {editMode && currentAcademicYear !== null && section.academic_year_start === currentAcademicYear && (
+                      <button
+                        onClick={() => !isLast && onDeleteSection(section)}
+                        className={`text-sm rounded px-2 py-0.5 ${
+                          isLast
+                            ? "text-gray-400 border border-gray-200 cursor-not-allowed"
+                            : "text-red-600 hover:text-red-800 border border-red-300"
+                        }`}
+                        title={isLast ? "Cannot delete the only section of this grade" : ""}
+                      >
+                        Delete
+                      </button>
+                    )}
+                  </div>
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>

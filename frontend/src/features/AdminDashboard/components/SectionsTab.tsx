@@ -8,7 +8,6 @@ interface SectionsTabProps {
   currentAcademicYear: number | null;
   onAddSection: () => void;
   onDeleteSection: (section: Section) => void;
-  isLastSectionOfGrade: (section: Section) => boolean;
 }
 
 const SectionsTab = ({
@@ -16,7 +15,6 @@ const SectionsTab = ({
   currentAcademicYear,
   onAddSection,
   onDeleteSection,
-  isLastSectionOfGrade,
 }: SectionsTabProps) => {
   const [sectionYear, setSectionYear] = useState<number>(currentAcademicYear || new Date().getFullYear());
   const [filteredSections, setFilteredSections] = useState<Section[]>([]);
@@ -36,6 +34,14 @@ const SectionsTab = ({
       setSectionYear(Math.max(...academicYears));
     }
   }, [academicYears]);
+
+  // Determine if a section is the last of its grade within the current filtered list
+  const isLastSectionOfGradeInYear = (section: Section) => {
+    const sectionsInSameGrade = filteredSections.filter(s => s.grade === section.grade);
+    const isLast = sectionsInSameGrade.length <= 1;
+    console.log(`Section ${section.grade}${section.name}: sectionsInSameGrade = ${sectionsInSameGrade.length}, isLast = ${isLast}`);
+    return isLast;
+    };
 
   return (
     <div>
@@ -86,7 +92,7 @@ const SectionsTab = ({
         <SectionsList
           sections={filteredSections}
           onDeleteSection={onDeleteSection}
-          isLastSectionOfGrade={isLastSectionOfGrade}
+          isLastSectionOfGrade={isLastSectionOfGradeInYear}
           currentAcademicYear={currentAcademicYear}
           editMode={sectionEditMode}
         />

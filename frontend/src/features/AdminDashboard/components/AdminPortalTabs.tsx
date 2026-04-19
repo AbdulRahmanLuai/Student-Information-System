@@ -147,7 +147,6 @@ const AdminPortalTabs = ({
           currentAcademicYear={currentAcademicYear}
           onAddSection={onAddSection}
           onDeleteSection={onDeleteSection}
-          isLastSectionOfGrade={isLastSectionOfGrade}
         />
       )}
 
