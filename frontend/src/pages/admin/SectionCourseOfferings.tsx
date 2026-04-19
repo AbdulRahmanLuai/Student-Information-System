@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import CourseOfferingCard from "../../components/CourseOfferingCard";
-import { getCourseOfferings, updateCourseOfferingTeacher } from "../../api/courseOfferings";
-import { getTeachers } from "../../api/teachers";
+import { getCourseOfferings } from "../../api/courseOfferings";
 import { CourseOffering } from "../../types";
 
 const SectionCourseOfferings = () => {

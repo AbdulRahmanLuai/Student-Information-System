@@ -98,7 +98,6 @@ const DepartmentCourses = ({
   if (courses.length === 0) return <p className="text-gray-500">No courses found for this department.</p>;
 
   const isFutureYear = selectedYear > currentAcademicYear;
-  const isCurrentSemester = selectedYear === currentAcademicYear && selectedSemester === currentSemesterNumber;
 
   return (
     <div>
