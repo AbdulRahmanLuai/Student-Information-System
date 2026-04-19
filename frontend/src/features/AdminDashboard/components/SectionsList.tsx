@@ -9,9 +9,9 @@ interface SectionsListProps {
   editMode: boolean;
 }
 
-const SectionsList = ({ sections, onDeleteSection, isLastSectionOfGrade, currentAcademicYear, editMode }: SectionsListProps) => {
-  if (sections.length === 0) {
-    return <p className="text-gray-500">No sections found for this academic year.</p>;
+const SectionsList = ({ sections = [], onDeleteSection, isLastSectionOfGrade, currentAcademicYear, editMode }: SectionsListProps) => {
+  if (!Array.isArray(sections) || sections.length === 0) {
+    return <p className="text-gray-500">No sections found.</p>;
   }
 
   return (
@@ -21,6 +21,7 @@ const SectionsList = ({ sections, onDeleteSection, isLastSectionOfGrade, current
           <tr>
             <th className="px-4 py-2 border-b">Section</th>
             <th className="px-4 py-2 border-b">Academic Year</th>
+            <th className="px-4 py-2 border-b"># of Students</th>
             <th className="px-4 py-2 border-b">Actions</th>
           </tr>
         </thead>
@@ -31,6 +32,7 @@ const SectionsList = ({ sections, onDeleteSection, isLastSectionOfGrade, current
               <tr key={section.id} className="hover:bg-gray-50">
                 <td className="px-4 py-2 border-b">{section.grade}{section.name}</td>
                 <td className="px-4 py-2 border-b">{section.academic_year_start} - {section.academic_year_start + 1}</td>
+                <td className="px-4 py-2 border-b">{section.student_count ?? 0}</td>
                 <td className="px-4 py-2 border-b">
                   <div className="flex gap-2">
                     <Link

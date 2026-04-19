@@ -123,6 +123,7 @@ class SectionOut(BaseModel):
     name: str
     academic_year_start: int
     has_unassigned_course_offerings: bool = False
+    student_count: int = 0
 
     class Config:
         from_attributes = True

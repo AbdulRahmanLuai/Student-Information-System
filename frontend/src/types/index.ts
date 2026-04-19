@@ -26,6 +26,7 @@ export interface Section {
   name: string;
   academic_year_start: number;
   has_unassigned_course_offerings?: boolean;
+  student_count?: number;
 }
 
 export interface Semester {
@@ -65,7 +66,7 @@ export interface Student {
   email: string;
   enrollment_date: string | null;
   status: StudentStatus;
-  section: Section | null;  // not section_id
+  section: Section | null;  
 }
 
 

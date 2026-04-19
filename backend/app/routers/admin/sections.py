@@ -4,7 +4,7 @@ from sqlalchemy import exists
 from typing import List
 from ... import schemas
 from ...database import get_db
-from ...models import Section, Student, CourseOffering, Semester, SemesterStatus, Course, CourseStatus
+from ...models import Section, Student, CourseOffering, Semester, SemesterStatus, Course, CourseStatus, StudentStatus
 from .dependencies import require_admin
 
 router = APIRouter()
@@ -77,21 +77,26 @@ def get_sections(
         CourseOffering.teacher_id.is_(None)
     ).correlate(Section).label("has_unassigned")
     
+    # Count students per section (only active students)
+    student_count = func.count(Student.id).filter(Student.status == StudentStatus.active).label("student_count")
     stmt = (
-        select(Section, unassigned_exists)
+        select(Section, unassigned_exists, student_count)
+        .outerjoin(Student, Student.section_id == Section.id)
         .where(Section.academic_year_start == academic_year_start)
+        .group_by(Section.id)
     )
     
     results = db.execute(stmt).all()
     sections_out = []
-    for section, has_unassigned in results:
+    for section, has_unassigned, count in results:
         sections_out.append(
             schemas.SectionOut(
                 id=section.id,
                 grade=section.grade,
                 name=section.name,
                 academic_year_start=section.academic_year_start,
-                has_unassigned_course_offerings=has_unassigned
+                has_unassigned_course_offerings=has_unassigned,
+                student_count=count
             )
         )
     return sections_out
