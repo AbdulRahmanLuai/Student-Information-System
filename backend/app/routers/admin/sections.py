@@ -4,7 +4,7 @@ from sqlalchemy import exists
 from typing import List
 from ... import schemas
 from ...database import get_db
-from ...models import Section, Student, CourseOffering, Semester, SemesterStatus, Course, CourseStatus, StudentStatus
+from ...models import Section, Student, CourseOffering, Semester, SemesterStatus, Course, CourseStatus, StudentStatus, Enrollment
 from .dependencies import require_admin
 
 router = APIRouter()
@@ -65,25 +65,37 @@ def get_sections(
     db: Session = Depends(get_db),
     current_user=Depends(require_admin)
 ):
-    # Assume current semester exists (dashboard enforces this)
+    # Current semester (for unassigned warning)
     current_semester = db.execute(
         select(Semester).where(Semester.status == SemesterStatus.current)
     ).scalar_one()
     
-    # Subquery: check if any unassigned course offering exists for this section in current semester
+    # Subquery: unassigned course offerings in current semester
     unassigned_exists = exists().where(
         CourseOffering.section_id == Section.id,
         CourseOffering.semester_id == current_semester.id,
         CourseOffering.teacher_id.is_(None)
     ).correlate(Section).label("has_unassigned")
     
-    # Count students per section (only active students)
-    student_count = func.count(Student.id).filter(Student.status == StudentStatus.active).label("student_count")
+    # Subquery: count distinct students enrolled in any course offering of this section
+    # during the given academic year (the section's academic_year_start)
+    student_count_subq = (
+        select(func.count(func.distinct(Enrollment.student_id)))
+        .select_from(CourseOffering)
+        .join(Enrollment, Enrollment.course_offering_id == CourseOffering.id)
+        .join(Semester, Semester.id == CourseOffering.semester_id)
+        .where(
+            CourseOffering.section_id == Section.id,
+            Semester.academic_year_start == academic_year_start
+        )
+        .correlate(Section)
+        .scalar_subquery()
+    )
+    
     stmt = (
-        select(Section, unassigned_exists, student_count)
-        .outerjoin(Student, Student.section_id == Section.id)
+        select(Section, unassigned_exists, student_count_subq)
         .where(Section.academic_year_start == academic_year_start)
-        .group_by(Section.id)
+        .order_by(Section.grade, Section.name)
     )
     
     results = db.execute(stmt).all()
@@ -96,11 +108,10 @@ def get_sections(
                 name=section.name,
                 academic_year_start=section.academic_year_start,
                 has_unassigned_course_offerings=has_unassigned,
-                student_count=count
+                student_count=count or 0
             )
         )
     return sections_out
-
 @router.get('/sections/{section_id}', response_model=schemas.SectionOut)
 def get_section(section_id: int, db: Session = Depends(get_db), current_user=Depends(require_admin)):
     section = db.get(Section, section_id)
