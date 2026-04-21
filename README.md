@@ -9,23 +9,23 @@ designed for administrators and teachers.
 
 ### Admin Portal
 
--   Dashboard -- view current semester, enrollment status, and actions\
--   Sections -- create, delete (with safeguards), and view details\
--   Students -- search, register, and move between sections\
+-   Dashboard -- view current semester, enrollment status, and actions
+-   Sections -- create, delete (with safeguards), and view details
+-   Students -- search, register, and move between sections
 -   Teachers -- add/search teachers (auto-generated passwords), view
-    offerings\
--   Departments -- view teachers and courses (with semester filter)\
+    offerings
+-   Departments -- view teachers and courses (with semester filter)
 -   Course Offerings -- filter by year, semester, section, department,
-    teacher\
+    teacher
 -   Academic Year Migration -- promote students and create next-year
-    structure\
+    structure
 -   Bulk Enrollment -- enroll all students for the current semester
 
 ### Teacher Portal
 
--   View assigned course offerings\
--   Enter marks per student\
--   Upload Excel marks (with preview)\
+-   View assigned course offerings
+-   Enter marks per student
+-   Upload Excel marks (with preview)
 -   Commit marks after final review
 
 ------------------------------------------------------------------------
@@ -51,14 +51,24 @@ designed for administrators and teachers.
 
 ## Project Structure
 
-backend/ ├── app/ │ ├── routers/ \# API endpoints │ ├── models.py \#
-SQLModel models │ ├── schemas.py \# Pydantic schemas │ ├── oauth2.py \#
-JWT handling │ └── main.py ├── seed\_\*.py \# Dev scripts └──
-requirements.txt
+backend/
+├── app/
+│ ├── routers/ # API endpoints (admin, teacher, auth)
+│ ├── models.py # SQLModel models
+│ ├── schemas.py # Pydantic schemas
+│ ├── oauth2.py # JWT handling
+│ └── main.py
+├── seed_*.py # Database seeding scripts
+└── requirements.txt
 
-frontend/ ├── src/ │ ├── api/ \# API client │ ├── components/ \#
-Reusable UI │ ├── features/ \# Feature modules │ ├── pages/ \# Page
-components │ ├── types/ \# TS interfaces │ └── hooks/ \# Custom hooks
+frontend/
+├── src/
+│ ├── api/ # Axios client and endpoint functions
+│ ├── components/ # Reusable UI components (StudentCard, etc.)
+│ ├── features/ # Feature‑based modules (AdminDashboard)
+│ ├── pages/ # Page components (admin, teacher, login)
+│ ├── types/ # TypeScript interfaces
+│ └── hooks/ # Custom hooks (auth, dashboard)
 └── package.json
 
 ------------------------------------------------------------------------
@@ -121,16 +131,16 @@ Scripts for resetting data and simulating full academic flows.
 
 ### Key Scripts
 
--   `drop_all.py` -- drop all tables\
--   `seed_academic_state.py` -- simulate academic year completion\
+-   `drop_all.py` -- drop all tables
+-   `seed_academic_state.py` -- simulate academic year completion
 -   `seed_commit_academic_state.py` -- simulate academic year completion + teacher assignment to course offerings
 -   `seed_commit_marks.py` -- assign random marks and complete
     enrollments
 
 ### Notes
 
--   Deletes and overrides data\
--   Uses SQL + API calls\
+-   Deletes and overrides data
+-   Uses SQL + API calls
 -   Requires:
 
 ``` ini
@@ -146,22 +156,22 @@ ADMIN_TOKEN=...
 
 ### Admin
 
--   Manage sections, students, teachers, departments\
--   Filter and manage course offerings\
--   Run academic year migration\
+-   Manage sections, students, teachers, departments
+-   Filter and manage course offerings
+-   Run academic year migration
 -   Enroll students and manage semesters
 
 ### Teacher
 
--   View assigned courses\
--   Enter or upload marks\
+-   View assigned courses
+-   Enter or upload marks
 -   Review and commit results
 
 ------------------------------------------------------------------------
 
 ## Excel Format
 
--   `student_id` (integer)\
+-   `student_id` (integer)
 -   `final_mark` (0--100)
 
 Template available in UI.
@@ -172,11 +182,11 @@ Template available in UI.
 
 Admin routes are prefixed with `/admin`
 
--   `/admin/sections`\
--   `/admin/course-offerings`\
--   `/admin/students`\
--   `/admin/teachers`\
--   `/admin/academic-year`\
+-   `/admin/sections`
+-   `/admin/course-offerings`
+-   `/admin/students`
+-   `/admin/teachers`
+-   `/admin/academic-year`
 -   `/teacher/course-offerings/{id}/marks`
 
 Docs: http://localhost:8000/docs
@@ -191,6 +201,6 @@ Docs: http://localhost:8000/docs
 
 ## Contact
 
-Abdul Rahman Abu Nabhan\
-AbdulRahman.Luai1@gmail.com\
+Abdul Rahman Abu Nabhan
+AbdulRahman.Luai1@gmail.com
 [LinkedIn](https://www.linkedin.com/in/abdul-rahman-abu-nabhan-95794924a/)
