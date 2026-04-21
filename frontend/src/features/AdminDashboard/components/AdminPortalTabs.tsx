@@ -25,6 +25,7 @@ interface AdminPortalTabsProps {
   departments: Department[];
   currentAcademicYear: number | null;
   currentSemesterNumber: number | null;
+  
 }
 
 const AdminPortalTabs = ({

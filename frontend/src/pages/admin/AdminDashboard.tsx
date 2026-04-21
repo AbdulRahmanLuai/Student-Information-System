@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import AdminLayout from "../../components/AdminLayout";
 import { useAdminDashboard } from "../../features/AdminDashboard/hooks/useAdminDashboard";
 import CurrentSemesterCard from "../../features/AdminDashboard/components/CurrentSemesterCard";
@@ -38,8 +39,6 @@ const AdminDashboard = () => {
     deletingSection,
     deleteSectionError,
     setDeleteSectionError,
-    activePortalTab,
-    setActivePortalTab,
     isLastSectionOfGrade,
     handleAddSection,
     handleDeleteSection,
@@ -51,6 +50,16 @@ const AdminDashboard = () => {
 
   const [academicYears, setAcademicYears] = useState<number[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const urlTab = searchParams.get("tab") as "students" | "teachers" | "sections" | "departments" | "course-offerings" | null;
+  const [activePortalTab, setActivePortalTab] = useState<"students" | "teachers" | "sections" | "departments" | "course-offerings">(
+    urlTab && ["students","teachers","sections","departments","course-offerings"].includes(urlTab) ? urlTab : "students"
+  );
+
+  const handleTabChange = (tab: typeof activePortalTab) => {
+    setActivePortalTab(tab);
+    setSearchParams({ tab });
+  };
 
   useEffect(() => {
     getAcademicYears().then(setAcademicYears).catch(console.error);
@@ -94,8 +103,9 @@ const AdminDashboard = () => {
 
         <AdminPortalTabs
           activeTab={activePortalTab}
-          onTabChange={setActivePortalTab}
+          onTabChange={handleTabChange}
           sections={sections}
+          
           onAddSection={() => {
             setShowAddSection(true);
           setSelectedGrade(null);
