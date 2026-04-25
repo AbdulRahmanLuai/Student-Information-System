@@ -79,7 +79,7 @@ const StudentCard = ({ student: s, sections, onMoveSection, showMoveOption = tru
             
             <Link
               to={`/admin/students/${s.id}`}
-              className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
+              className="text-sm font-medium text-indigo-600 hover:text-indigo-800 hover:underline"
             >
               View Profile
             </Link>

@@ -30,7 +30,7 @@ const EnrollmentPanel = ({
           <button
             onClick={onEnrollAll}
             disabled={actionLoading}
-            className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 disabled:bg-gray-400"
+            className="bg-emerald-600 text-white px-4 py-3 rounded-md hover:bg-emerald-700 disabled:bg-slate-300 font-medium text-sm transition"
           >
             Enroll All Students
           </button>

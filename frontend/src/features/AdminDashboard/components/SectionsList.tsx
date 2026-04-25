@@ -36,11 +36,11 @@ const SectionsList = ({ sections = [], onDeleteSection, isLastSectionOfGrade, cu
                 <td className="px-4 py-2 border-b">
                   <div className="flex gap-2">
                     <Link
-                      to={`/admin/sections/${section.id}`}
-                      className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
-                    >
-                      Details
-                    </Link>
+                        to={`/admin/sections/${section.id}`}
+                        className="text-sm font-medium text-indigo-600 hover:text-indigo-800 hover:underline"
+                      >
+                        Details
+                      </Link>
                     {editMode && currentAcademicYear !== null && section.academic_year_start === currentAcademicYear && (
                       <button
                         onClick={() => !isLast && onDeleteSection(section)}

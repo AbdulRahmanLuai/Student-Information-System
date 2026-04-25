@@ -162,10 +162,12 @@ export const useAdminDashboard = () => {
       setSemesters(data);
       setSections([]);
     } catch (err: any) {
-      const detail = err.response?.data?.detail || "Failed to end semester";
-      const lines = detail.split("\n").map((l: string) => l.trim()).filter(Boolean);
-      setEndSemesterError(lines);
-    } finally {
+    console.log(err.response?.data); // ← add this
+
+    const detail = err.response?.data?.detail || "Failed to end semester";
+    const lines = detail.split("\n").map((l: string) => l.trim()).filter(Boolean);
+    setEndSemesterError(lines);
+} finally {
       setActionLoading(false);
     }
   };

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
-import client from "../api/client"; // use the client with baseURL
+import client from "../api/client";
 
 const Login = () => {
   const [username, setUsername] = useState("");
@@ -24,7 +24,7 @@ const Login = () => {
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
       });
 
-      login(response.data.access_token); // store token in localStorage
+      login(response.data.access_token);
       navigate("/dashboard");
     } catch (err: any) {
       setError(err.response?.data?.detail || "Login failed");
@@ -32,41 +32,62 @@ const Login = () => {
   };
 
   return (
-    <div className="max-w-md mx-auto mt-20 p-6 bg-white rounded shadow">
-      <h1 className="text-2xl font-bold mb-4">Login</h1>
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4">
 
-      {error && <div className="mb-4 text-red-500">{error}</div>}
+      <div className="w-full max-w-lg bg-white border border-slate-200 rounded-xl shadow-sm p-8">
 
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label className="block mb-1 font-semibold">Username</label>
-          <input
-            type="text"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            className="w-full border rounded px-3 py-2"
-            required
-          />
-        </div>
-
-        <div>
-          <label className="block mb-1 font-semibold">Password</label>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full border rounded px-3 py-2"
-            required
-          />
-        </div>
-
-        <button
-          type="submit"
-          className="w-full bg-blue-500 text-white py-2 rounded hover:bg-blue-600"
-        >
+        <h1 className="text-2xl font-semibold text-slate-900 mb-1">
           Login
-        </button>
-      </form>
+        </h1>
+
+        <p className="text-sm text-slate-500 mb-5">
+          Enter your credentials to continue
+        </p>
+
+        {error && (
+          <div className="mb-4 text-sm text-red-600 bg-red-50 border border-red-200 rounded-md px-3 py-2">
+            {error}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-5">
+
+          <div>
+            <label className="block mb-1 text-sm font-medium text-slate-700">
+              Username
+            </label>
+            <input
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              className="w-full border border-slate-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-indigo-500"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block mb-1 text-sm font-medium text-slate-700">
+              Password
+            </label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full border border-slate-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-indigo-500"
+              required
+            />
+          </div>
+
+          <button
+            type="submit"
+            className="w-full px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700"
+          >
+            Login
+          </button>
+
+        </form>
+
+      </div>
     </div>
   );
 };

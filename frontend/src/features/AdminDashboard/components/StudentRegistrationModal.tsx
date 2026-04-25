@@ -100,7 +100,7 @@ const StudentRegistrationModal = ({
             <button type="button" onClick={onClose} className="px-4 py-2 text-sm rounded border hover:bg-gray-50">
               Cancel
             </button>
-            <button type="submit" disabled={registering} className="px-4 py-2 text-sm rounded bg-blue-600 text-white hover:bg-blue-700 disabled:bg-gray-400">
+            <button type="submit" disabled={registering} className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 transition">
               {registering ? "Registering..." : "Register"}
             </button>
           </div>

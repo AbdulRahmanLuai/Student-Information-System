@@ -14,45 +14,46 @@ const CurrentSemesterCard = ({
   onEndSemester,
 }: CurrentSemesterCardProps) => {
   return (
-    <div className="bg-white rounded-lg shadow p-6 mb-6">
-      <h2 className="text-lg font-semibold mb-4">Current Semester</h2>
-      {currentSemester ? (
-        <div>
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-700 font-medium">
-                {currentSemester.academic_year_start}/{currentSemester.academic_year_end} — Semester{" "}
-                {currentSemester.number}
-              </p>
-              <p className="text-sm text-gray-500 capitalize">{currentSemester.status}</p>
-            </div>
-            <button
-              onClick={onEndSemester}
-              disabled={actionLoading}
-              className="bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600 disabled:bg-gray-400"
-            >
-              End Semester
-            </button>
-          </div>
+    <div className="bg-white border border-slate-200 rounded-md px-4 py-3 mb-4">
 
-          {endSemesterError.length > 0 && (
-            <div className="mt-4 bg-red-50 border border-red-200 rounded p-4">
-              <p className="text-red-700 font-medium text-sm mb-2">
-                {endSemesterError[0]}
-              </p>
-              <ul className="space-y-1">
-                {endSemesterError.slice(1).map((line, i) => (
-                  <li key={i} className="text-red-600 text-sm">
-                    {line}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
+      {/* TOP ROW */}
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-xs text-slate-500 uppercase tracking-wide">
+            Current Semester
+          </p>
+          <p className="text-sm font-medium text-slate-900 mt-0.5">
+            {currentSemester
+              ? `${currentSemester.academic_year_start}/${currentSemester.academic_year_end} — Semester ${currentSemester.number}`
+              : "No active semester"}
+          </p>
         </div>
-      ) : (
-        <p className="text-gray-500">No active semester.</p>
+
+        {currentSemester && (
+          <button
+            onClick={onEndSemester}
+            disabled={actionLoading}
+            className="px-3 py-1.5 rounded-md bg-red-600 text-white text-xs hover:bg-red-700 disabled:bg-slate-400 transition"
+          >
+            End Semester
+          </button>
+        )}
+      </div>
+
+      {/* ERROR BELOW (full width, clean) */}
+      {endSemesterError.length > 0 && (
+        <div className="mt-3 bg-red-50 border border-red-200 rounded-md p-3">
+          <p className="text-red-700 text-xs font-medium mb-1">
+            {endSemesterError[0]}
+          </p>
+          <ul className="text-xs text-red-600 space-y-0.5">
+            {endSemesterError.slice(1).map((line, i) => (
+              <li key={i}>{line}</li>
+            ))}
+          </ul>
+        </div>
       )}
+
     </div>
   );
 };

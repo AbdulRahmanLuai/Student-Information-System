@@ -71,7 +71,14 @@ const AdminDashboard = () => {
 
   return (
     <AdminLayout>
-      <h1 className="text-2xl font-bold mb-6">Admin Dashboard</h1>
+      <div className="mb-6">
+        <h1 className="text-xl font-semibold tracking-tight text-slate-900">
+          Admin Dashboard
+        </h1>
+        <p className="text-sm text-slate-500 mt-1">
+          Manage academic operations, users, and system data
+        </p>
+      </div>
 
       {loading && <p>Loading...</p>}
       {error && <p className="text-red-500 mb-4">{error}</p>}

@@ -83,7 +83,7 @@ const StudentProfile = () => {
     <AdminLayout>
       <button
         onClick={() => navigate("/admin/dashboard")}
-        className="mb-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+        className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 transition mb-2"
       >
         ← Back to Dashboard
       </button>

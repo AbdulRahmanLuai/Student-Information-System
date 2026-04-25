@@ -7,10 +7,10 @@ const TeacherLayout = ({ children }: { children: ReactNode }) => {
   return (
     <div className="min-h-screen bg-gray-100">
       <header className="bg-white shadow px-6 py-4 flex justify-between items-center">
-        <h1 className="text-lg font-semibold">Student System</h1>
+        <h1 className="text-lg font-semibold">Student Information System - Teacher View</h1>
         <button
           onClick={logout}
-          className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600"
+          className="px-3 py-1.5 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700"
         >
           Logout
         </button>

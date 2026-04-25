@@ -7,15 +7,15 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
   return (
     <div className="min-h-screen bg-gray-100">
       <header className="bg-white shadow px-6 py-4 flex justify-between items-center">
-        <h1 className="text-lg font-semibold">Student System — Admin</h1>
+        <h1 className="text-lg font-semibold">Student Information System — Admin View</h1>
         <button
           onClick={logout}
-          className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600"
+          className="px-3 py-1.5 text-xs font-medium text-white bg-red-600 rounded-md hover:bg-red-700 transition"
         >
           Logout
         </button>
       </header>
-      <main className="max-w-5xl mx-auto p-6">{children}</main>
+      <main className="max-w-screen-xl mx-auto p-6">{children}</main>
     </div>
   );
 };

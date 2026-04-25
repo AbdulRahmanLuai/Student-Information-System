@@ -138,8 +138,6 @@ const AdminPortalTabs = ({
 
   return (
     <div className="bg-white rounded-lg shadow p-6 mb-6">
-      <h2 className="text-lg font-semibold mb-4">Admin Portal</h2>
-
       <AdminTabsHeader activeTab={activeTab} onTabChange={onTabChange} />
 
       {activeTab === "sections" && currentSemesterExists && (

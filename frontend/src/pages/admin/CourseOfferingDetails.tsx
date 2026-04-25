@@ -141,64 +141,85 @@ const CourseOfferingDetails = () => {
     <AdminLayout>
       <button
         onClick={() => navigate(-1)}
-        className="mb-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+        className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 transition mb-2"
       >
-        ← Back
+        ← Back 
       </button>
 
-      <div className="bg-white rounded-lg shadow p-6 mb-6">
-        <h1 className="text-2xl font-bold mb-2">
-          {offering.course.name} ({offering.course.code})
-        </h1>
-        <div className="grid grid-cols-2 gap-4 mb-4">
+     <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-5 mb-6">
+
+        <div className="mb-4">
+          <h1 className="text-xl font-semibold text-slate-900">
+            {offering.course.name} ({offering.course.code})
+          </h1>
+        </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+
           <div>
-            <p className="text-sm text-gray-500">Section</p>
-            <p className="font-medium">{offering.section.grade}{offering.section.name}</p>
-          </div>
-          <div>
-            <p className="text-sm text-gray-500">Semester</p>
-            <p className="font-medium">
-              Year {offering.semester.academic_year_start}-{offering.semester.academic_year_end}, Sem {offering.semester.number}
-              <span className={`ml-2 text-xs px-2 py-1 rounded-full ${offering.semester.status === "current" ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
-                {offering.semester.status}
-              </span>
+            <p className="text-slate-500 mb-1">Section</p>
+            <p className="font-medium text-slate-900">
+              {offering.section.grade}{offering.section.name}
             </p>
           </div>
+
           <div>
-            <p className="text-sm text-gray-500">Teacher</p>
+            <p className="text-slate-500 mb-1">Semester</p>
             <div className="flex items-center gap-2">
-              <p className="font-medium">
-                {offering.teacher ? `${offering.teacher.user.first_name} ${offering.teacher.user.last_name}` : "Not assigned"}
+              <p className="font-medium text-slate-900">
+                {offering.semester.academic_year_start}-{offering.semester.academic_year_end} • S{offering.semester.number}
+              </p>
+              <span className={`text-xs px-2 py-0.5 rounded-full ${
+                offering.semester.status === "current"
+                  ? "bg-emerald-50 text-emerald-700"
+                  : "bg-slate-100 text-slate-600"
+              }`}>
+                {offering.semester.status}
+              </span>
+            </div>
+          </div>
+
+          <div>
+            <p className="text-slate-500 mb-1">Teacher</p>
+            <div className="flex items-center gap-2">
+              <p className="font-medium text-slate-900">
+                {offering.teacher
+                  ? `${offering.teacher.user.first_name} ${offering.teacher.user.last_name}`
+                  : "Not assigned"}
               </p>
               {isCurrentSemester && (
                 <button
                   onClick={handleEditTeacherClick}
-                  className="text-sm bg-indigo-600 text-white px-2 py-1 rounded hover:bg-indigo-700"
+                  className="text-xs px-2 py-1 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
                 >
-                  Edit Teacher
+                  Edit
                 </button>
               )}
             </div>
           </div>
+
           <div>
-            <p className="text-sm text-gray-500">Department</p>
-            <p className="font-medium">{offering.course.department.name}</p>
-          </div>
-          <div>
-            <p className="text-sm text-gray-500">Status</p>
-            <p className="font-medium">
-              <span className={`text-xs px-2 py-1 rounded-full ${
-                offering.status === "active" ? "bg-green-100 text-green-700" : 
-                offering.status === "completed" ? "bg-blue-100 text-blue-700" : 
-                "bg-gray-100 text-gray-500"
-              }`}>
-                {offering.status || "unknown"}
-              </span>
+            <p className="text-slate-500 mb-1">Department</p>
+            <p className="font-medium text-slate-900">
+              {offering.course.department.name}
             </p>
           </div>
+
+          <div>
+            <p className="text-slate-500 mb-1">Status</p>
+            <span className={`text-xs px-2 py-0.5 rounded-full ${
+              offering.status === "active"
+                ? "bg-emerald-50 text-emerald-700"
+                : offering.status === "completed"
+                ? "bg-indigo-50 text-indigo-700"
+                : "bg-slate-100 text-slate-600"
+            }`}>
+              {offering.status || "unknown"}
+            </span>
+          </div>
+
         </div>
       </div>
-
       <div className="mb-4">
         <div className="flex justify-between items-center">
           <h2 className="text-xl font-semibold">Enrollments</h2>
@@ -207,14 +228,14 @@ const CourseOfferingDetails = () => {
               <>
                 <button
                   onClick={handleOpenAddModal}
-                  className="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700"
+                  className="px-4 py-2 text-sm font-medium text-white bg-emerald-600 rounded-md hover:bg-emerald-700 transition"
                 >
                   Enroll Student
                 </button>
                 {!editMode ? (
                   <button
                     onClick={() => setEditMode(true)}
-                    className="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700"
+                    className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 transition"
                   >
                     Edit Enrollments
                   </button>
@@ -355,7 +376,7 @@ const CourseOfferingDetails = () => {
               </select>
               <div className="flex justify-end gap-2">
                 <button onClick={() => setShowAddModal(false)} className="px-3 py-1 border rounded">Cancel</button>
-                <button onClick={handleAddEnrollment} disabled={!selectedStudentId || adding} className="px-3 py-1 bg-blue-600 text-white rounded">Enroll</button>
+                <button onClick={handleAddEnrollment} disabled={!selectedStudentId || adding} className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 transition">Enroll</button>
               </div>
             </div>
           </div>

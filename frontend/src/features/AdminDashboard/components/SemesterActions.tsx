@@ -37,7 +37,7 @@ const SemesterActions = ({
           <button
             onClick={onMigrate}
             disabled={actionLoading}
-            className="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700 disabled:bg-gray-400"
+            className="px-4 py-2 text-sm font-medium text-white bg-blue-700 rounded-md hover:bg-blue-800 disabled:bg-slate-300 transition"
           >
             Migrate to New Academic Year
           </button>

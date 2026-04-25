@@ -101,7 +101,7 @@ const AcademicYearSections = () => {
       <button
         onClick={handleCommit}
         disabled={!allConfigured || actionLoading}
-        className="w-full bg-purple-600 text-white px-4 py-3 rounded-lg hover:bg-purple-700 disabled:bg-gray-400 font-medium transition"
+        className="px-4 py-2 text-sm font-medium text-white bg-blue-700 rounded-md hover:bg-blue-800 disabled:bg-slate-300 transition"
       >
         {actionLoading ? "Committing..." : "Commit Academic Year"}
       </button>

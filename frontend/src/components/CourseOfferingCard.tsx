@@ -42,7 +42,7 @@ const CourseOfferingCard = ({
               <td className="px-4 py-2 border-b">
                 <Link
                   to={`/admin/course-offerings/${co.id}`}
-                  className="text-sm bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 inline-block text-center"
+                  className="text-sm font-medium text-indigo-600 hover:text-indigo-800 hover:underline"
                 >
                   Details
                 </Link>
