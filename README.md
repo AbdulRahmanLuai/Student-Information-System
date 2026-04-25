@@ -7,6 +7,14 @@ designed for administrators and teachers.
 
 ------------------------------------------------------------------------
 
+# Screenshots
+
+### Admin Dashboard
+![Admin Dashboard](./screenshots/AdminDashboard.png)
+
+### Teacher Dashboard
+![Teacher Dashboard](./screenshots/TeacherDashboard.png)
+
 ### Admin Portal
 
 -   Dashboard -- view current semester, enrollment status, and actions
@@ -51,25 +59,31 @@ designed for administrators and teachers.
 
 ## Project Structure
 
+### Backend
+```text
 backend/
 ├── app/
-│ ├── routers/ # API endpoints (admin, teacher, auth)
-│ ├── models.py # SQLModel models
-│ ├── schemas.py # Pydantic schemas
-│ ├── oauth2.py # JWT handling
-│ └── main.py
-├── seed_*.py # Database seeding scripts
+│   ├── routers/        # API endpoints (admin, teacher, auth)
+│   ├── models.py       # SQLModel models
+│   ├── schemas.py      # Pydantic schemas
+│   ├── oauth2.py       # JWT handling
+│   └── main.py
+├── seed_*.py           # Database seeding scripts
 └── requirements.txt
+```
 
+### Frontend
+```text
 frontend/
 ├── src/
-│ ├── api/ # Axios client and endpoint functions
-│ ├── components/ # Reusable UI components (StudentCard, etc.)
-│ ├── features/ # Feature‑based modules (AdminDashboard)
-│ ├── pages/ # Page components (admin, teacher, login)
-│ ├── types/ # TypeScript interfaces
-│ └── hooks/ # Custom hooks (auth, dashboard)
+│   ├── api/            # Axios client and endpoint functions
+│   ├── components/     # Reusable UI components
+│   ├── features/       # Feature-based modules (AdminDashboard)
+│   ├── pages/          # Page components (admin, teacher, login)
+│   ├── types/          # TypeScript interfaces
+│   └── hooks/          # Custom hooks (auth, dashboard)
 └── package.json
+```
 
 ------------------------------------------------------------------------
 
