@@ -15,6 +15,9 @@ designed for administrators and teachers.
 ### Teacher Dashboard
 ![Teacher Dashboard](./screenshots/TeacherDashboard.png)
 
+### Academic Year Migration - Section Setup
+
+![alt text](./screenshots/AcademicYearMigrationSetup.png)
 ### Admin Portal
 
 -   Dashboard -- view current semester, enrollment status, and actions
