@@ -56,6 +56,7 @@ designed for administrators and teachers.
                                  Router, Tailwind CSS, Axios
 
   Tooling                        Git, Postman
+  
   -----------------------------------------------------------------------
 
 ------------------------------------------------------------------------
