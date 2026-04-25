@@ -56,6 +56,15 @@ const AcademicYearSections = () => {
 
   return (
     <AdminLayout>
+      {/* Back button above everything */}
+      <button
+        onClick={() => navigate("/admin/dashboard")}
+        className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 transition mb-4"
+      >
+        ← Back to Dashboard
+      </button>
+
+      {/* Title and reset button row */}
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">Academic Year Setup</h1>
         <button
